@@ -105,6 +105,28 @@ def safe_filename(code: str) -> str:
     base = re.sub(r"[^A-Za-z0-9_-]+", "_", code.strip())
     return base or "OUTLET"
 
+
+def is_synthetic_main_row(code: object, name: object, month: object) -> bool:
+    code_text = str(code or "").strip()
+    name_text = str(name or "").strip()
+    month_text = str(month or "").strip()
+
+    # Workbook contains synthetic monthly summary rows such as:
+    #   Code = "All:Jan-21"
+    #   Month = "Jan-21"
+    #   Name = "157"
+    # Those rows must not appear in the outlet selector and must not be used
+    # as actual outlet data or network totals.
+    if code_text.lower().startswith("all:"):
+        return True
+
+    # Defensive fallback in case future files use the same pattern with different casing/spaces.
+    if code_text.lower().startswith("all -") or code_text.lower().startswith("all "):
+        if month_key(code_text.split(":", 1)[-1].strip()) or month_key(month_text):
+            return True
+
+    return False
+
 class XlsxReader:
     def __init__(self, path: Path):
         self.path = path
@@ -449,26 +471,42 @@ def build() -> dict:
         outlet_months: dict[str, dict[str, list[list[float]]]] = {}
         actual_months = set()
         network: dict[str, list[float]] = {}
+        monthly_summary_rows: dict[str, dict] = {}
 
         for rn, row in reader.iter_rows("MAIN"):
             if rn <= 2:
                 continue
 
             code = str(cell_value(row, main_cols["code"]) or "").strip()
-            mk = month_key(cell_value(row, main_cols["month"]))
+            raw_month = cell_value(row, main_cols["month"])
+            mk = month_key(raw_month)
             if not code or not mk:
                 continue
 
             name = str(cell_value(row, main_cols["name"]) or "").strip()
+
+            sales = [safe_number(cell_value(row, d["salesMainCol"])) for d in detail_defs]
+            ff = [safe_number(cell_value(row, d["ffMainCol"])) for d in detail_defs]
+
+            # Keep workbook-generated monthly "All:" summary rows in a separate,
+            # chronological dashboard selector instead of treating them as outlets.
+            if is_synthetic_main_row(code, name, raw_month):
+                outlet_count = int(round(safe_number(name))) if safe_number(name) else 0
+                monthly_summary_rows[mk] = {
+                    "month": mk,
+                    "sourceCode": code,
+                    "outletCount": outlet_count,
+                    "sales": sales,
+                    "ff": ff,
+                }
+                continue
+
             if name:
                 outlets[code] = name
             else:
                 outlets.setdefault(code, code)
 
             actual_months.add(mk)
-
-            sales = [safe_number(cell_value(row, d["salesMainCol"])) for d in detail_defs]
-            ff = [safe_number(cell_value(row, d["ffMainCol"])) for d in detail_defs]
 
             om = outlet_months.setdefault(code, {})
             if mk not in om:
@@ -551,6 +589,7 @@ def build() -> dict:
                 "earliestActualMonth": earliest_actual,
                 "latestActualMonth": latest_actual,
                 "futureHeaderMonthCount": len([m for m in horizon if m > latest_actual]),
+                "networkMonthSummaryCount": len(monthly_summary_rows),
             },
             "config": cfg,
             "months": [
@@ -563,6 +602,9 @@ def build() -> dict:
             "allYearGrandIndex": all_year["grandIndex"],
             "projectedRows": projected_rows,
             "networkTotals": network,
+            "networkMonthSummaries": [
+                monthly_summary_rows[m] for m in sorted(monthly_summary_rows)
+            ],
             "outlets": outlet_index,
         }
         (SITE_DIR / "data" / "index.json").write_text(
@@ -580,6 +622,7 @@ def build() -> dict:
             "allYearRows": len(all_year["rows"]),
             "detailCategories": all_year["detailCount"],
             "projectedRows": len(projected_rows),
+            "networkMonthSummaries": len(monthly_summary_rows),
             "projectedTargetFromLatestActual": shift_month(latest_actual, 1),
         }
         return summary
