@@ -1,0 +1,15 @@
+{
+  "title": "Z-Report Category-Wise Sales & Footfall Dashboard",
+  "subtitle": "Outlet-wise historical performance and automated projected ZREPORT",
+  "defaultRangeMonths": 12,
+  "requiredSheets": [
+    "MAIN",
+    "All Year",
+    "AUTOMATED PROJECTED ZREPORT"
+  ],
+  "mainHeaderRow": 2,
+  "allYearMonthRow": 2,
+  "allYearMetricRow": 3,
+  "allYearOutletCodeCell": "B3",
+  "projectedOutletCodeCell": "A1"
+}

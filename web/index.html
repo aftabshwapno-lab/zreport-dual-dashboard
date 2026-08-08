@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Z-Report Dual Dashboard</title>
+  <link rel="stylesheet" href="styles.css?v=zreport-dark-v1">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <div class="eyebrow">RETAIL PERFORMANCE INTELLIGENCE</div>
+      <h1>Z-Report Category-Wise Sales & Footfall</h1>
+      <p>Historical All Year performance and automated projected ZREPORT</p>
+    </div>
+    <div class="source-pills">
+      <span id="source-pill" class="pill">Loading workbook…</span>
+      <span id="range-pill" class="pill">Loading period…</span>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="global-panel">
+      <div class="controls-grid">
+        <label class="field outlet-search">
+          <span>Search outlet</span>
+          <input id="outlet-search" type="search" placeholder="Type code or outlet name">
+        </label>
+        <label class="field outlet-select">
+          <span>Select outlet</span>
+          <select id="outlet-select"></select>
+        </label>
+        <label class="field">
+          <span>From month</span>
+          <input id="date-start" type="month">
+        </label>
+        <label class="field">
+          <span>To month</span>
+          <input id="date-end" type="month">
+        </label>
+        <div class="quick-ranges">
+          <span>Quick range</span>
+          <div class="quick-buttons">
+            <button class="btn ghost" data-range="6">6M</button>
+            <button class="btn ghost" data-range="12">12M</button>
+            <button class="btn ghost" data-range="24">24M</button>
+            <button class="btn ghost" data-range="all">All</button>
+          </div>
+        </div>
+      </div>
+      <div class="global-note">
+        One outlet selector controls both dashboards. The date range controls the All Year view; the selected <strong>To month</strong> is also used as the Last Month baseline for the projected dashboard.
+      </div>
+    </section>
+
+    <!-- Dashboard 1 -->
+    <section class="dashboard-card" id="all-year-dashboard">
+      <div class="section-head">
+        <div>
+          <div class="section-kicker">DASHBOARD 01</div>
+          <h2>All Year</h2>
+          <p id="all-year-caption">Monthly category performance</p>
+        </div>
+        <div class="section-actions">
+          <div class="segmented" id="metric-tabs">
+            <button data-metric="sales" class="active">Sales</button>
+            <button data-metric="ff">FF</button>
+            <button data-metric="basket">Basket</button>
+          </div>
+          <button id="download-all-year" class="btn primary">Download visible CSV</button>
+        </div>
+      </div>
+
+      <div id="all-year-kpis" class="kpi-grid six"></div>
+
+      <div class="chart-panel">
+        <div class="chart-title-row">
+          <div>
+            <span class="section-kicker">GRAND TOTAL TREND</span>
+            <h3 id="trend-title">Monthly Sales</h3>
+          </div>
+          <div id="trend-value" class="chart-value"></div>
+        </div>
+        <div id="trend-chart" class="trend-chart"></div>
+      </div>
+
+      <div class="table-caption-row">
+        <div>
+          <strong>Category × Month</strong>
+          <span id="all-year-table-summary"></span>
+        </div>
+        <span class="sort-help">Click any column header to sort ↕</span>
+      </div>
+      <div class="table-wrap all-year-wrap">
+        <table id="all-year-table">
+          <thead><tr id="all-year-head"></tr></thead>
+          <tbody id="all-year-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Dashboard 2 -->
+    <section class="dashboard-card" id="projected-dashboard">
+      <div class="section-head">
+        <div>
+          <div class="section-kicker">DASHBOARD 02</div>
+          <h2>AUTOMATED PROJECTED ZREPORT</h2>
+          <p id="projected-caption">Projection model follows the workbook's existing logic.</p>
+        </div>
+        <div class="section-actions">
+          <button id="download-projected" class="btn primary">Download visible CSV</button>
+        </div>
+      </div>
+
+      <div id="projected-kpis" class="kpi-grid six"></div>
+
+      <div class="projection-info" id="projection-info"></div>
+
+      <div class="table-caption-row">
+        <div>
+          <strong>Category Projection</strong>
+          <span id="projected-table-summary"></span>
+        </div>
+        <span class="sort-help">Click any column header to sort ↕</span>
+      </div>
+      <div class="table-wrap projected-wrap">
+        <table id="projected-table">
+          <thead id="projected-head"></thead>
+          <tbody id="projected-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="definitions">
+      <strong>Projection logic preserved from the workbook:</strong>
+      the selected To month is treated as Last Month; the projected month is the following month. The projected grand total applies the network's prior-year month-on-month growth factor for the corresponding Last Year reference month, and category projections use the selected outlet's Last Month category mix. Basket = Sales ÷ FF.
+    </section>
+
+    <footer>
+      Replace the single Excel workbook in <code>/data</code> with any filename while keeping the required sheets/headers. GitHub Actions will rebuild the dashboard automatically.
+    </footer>
+  </main>
+
+  <script src="app.js?v=zreport-dark-v1"></script>
+</body>
+</html>

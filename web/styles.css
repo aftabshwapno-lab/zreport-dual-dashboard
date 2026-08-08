@@ -1,0 +1,171 @@
+:root{
+  --bg:#06090d;
+  --panel:#0e141a;
+  --panel2:#121a21;
+  --panel3:#17212a;
+  --line:#263744;
+  --line2:#334957;
+  --text:#f4f8fb;
+  --muted:#9fb1bd;
+  --blue:#35a4d6;
+  --blue2:#7ad6f3;
+  --red:#f0526f;
+  --green:#38c98b;
+  --amber:#f2b94b;
+  --shadow:0 12px 30px rgba(0,0,0,.36);
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);color-scheme:dark}
+body{font-family:Inter,"Segoe UI",Arial,sans-serif;font-size:13px}
+button,input,select{font:inherit}
+.topbar{
+  background:#0b1117;
+  border-bottom:3px solid #1d7da7;
+  padding:24px 28px 20px;
+  display:flex;justify-content:space-between;gap:24px;align-items:flex-end;
+  box-shadow:0 10px 28px rgba(0,0,0,.36);
+}
+.eyebrow,.section-kicker{font-size:10px;font-weight:900;letter-spacing:1.35px;color:#75cce9}
+.topbar h1{margin:4px 0 4px;font-size:28px;line-height:1.05;letter-spacing:-.6px}
+.topbar p{margin:0;color:#b9c8d1}
+.source-pills{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.pill{background:#111b23;border:1px solid #2c414e;border-radius:999px;padding:7px 10px;color:#c9d7df;font-size:11px}
+.page{max-width:1900px;margin:0 auto;padding:16px}
+.global-panel,.dashboard-card,.definitions{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:14px;
+  box-shadow:var(--shadow);
+}
+.global-panel{padding:14px;margin-bottom:14px}
+.controls-grid{
+  display:grid;
+  grid-template-columns:1.5fr 2.2fr 1fr 1fr 1.5fr;
+  gap:10px;align-items:end;
+}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field span,.quick-ranges>span{font-size:10px;text-transform:uppercase;letter-spacing:.5px;font-weight:800;color:#aebec8}
+.field input,.field select{
+  width:100%;height:38px;background:#091016;color:#f7fbfd;border:1px solid #344b59;border-radius:9px;padding:0 10px;outline:none;
+}
+.field select option{background:#091016;color:#f7fbfd}
+.field input:focus,.field select:focus{border-color:#4fa9d1;box-shadow:0 0 0 3px rgba(79,169,209,.14)}
+.quick-ranges{display:flex;flex-direction:column;gap:5px}
+.quick-buttons{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.btn{
+  height:38px;border-radius:9px;border:1px solid #344b59;cursor:pointer;font-weight:800;
+  background:#18242d;color:#eaf3f7;padding:0 12px;
+}
+.btn:hover{background:#22323e}
+.btn.primary{background:#2387b3;border-color:#2387b3;color:#fff}
+.btn.primary:hover{background:#2999ca}
+.btn.ghost{height:38px}
+.global-note{margin-top:10px;padding-top:10px;border-top:1px solid #22323d;color:#99acb8;font-size:11px}
+
+.dashboard-card{margin-bottom:16px;overflow:hidden}
+.section-head{
+  padding:15px 16px 12px;display:flex;justify-content:space-between;gap:18px;align-items:flex-end;
+  background:#101820;border-bottom:1px solid #273945;
+}
+.section-head h2{margin:3px 0 3px;font-size:20px}
+.section-head p{margin:0;color:#9fb1bd;font-size:11px}
+.section-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.segmented{display:flex;border:1px solid #34505f;border-radius:9px;overflow:hidden}
+.segmented button{
+  height:36px;border:0;border-right:1px solid #34505f;background:#111c24;color:#aebfc9;padding:0 15px;cursor:pointer;font-weight:800;
+}
+.segmented button:last-child{border-right:0}
+.segmented button.active{background:#1e7ca5;color:#fff}
+
+.kpi-grid{display:grid;gap:9px;padding:12px 14px}
+.kpi-grid.six{grid-template-columns:repeat(6,1fr)}
+.kpi{
+  background:#111a21;border:1px solid #263944;border-radius:11px;min-height:83px;padding:12px 13px;position:relative;overflow:hidden;
+}
+.kpi:before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:#2c96c3}
+.kpi.accent:before{background:#f0526f}
+.kpi.good:before{background:#38c98b}
+.kpi.warn:before{background:#f2b94b}
+.kpi-label{font-size:9.5px;text-transform:uppercase;letter-spacing:.55px;font-weight:850;color:#9fb2bd;line-height:1.2}
+.kpi-value{font-size:21px;font-weight:900;margin-top:7px;letter-spacing:-.35px}
+.kpi-note{font-size:9.5px;color:#7f95a2;margin-top:2px}
+
+.chart-panel{margin:0 14px 12px;border:1px solid #253945;border-radius:11px;background:#0b1117;padding:12px}
+.chart-title-row{display:flex;justify-content:space-between;align-items:flex-start;gap:15px}
+.chart-title-row h3{margin:3px 0 0;font-size:14px}
+.chart-value{font-size:18px;font-weight:900;color:#77d5f3}
+.trend-chart{height:210px;margin-top:8px;overflow:hidden}
+.trend-chart svg{width:100%;height:100%;display:block}
+.chart-gridline{stroke:#24343f;stroke-width:1}
+.chart-line{fill:none;stroke:#49b9e4;stroke-width:2.2}
+.chart-area{fill:#102c39}
+.chart-point{fill:#93e3ff;stroke:#071016;stroke-width:1.2}
+.chart-label{fill:#8197a4;font-size:9px}
+.chart-y-label{fill:#708692;font-size:8px}
+
+.table-caption-row{
+  padding:9px 14px;display:flex;justify-content:space-between;gap:10px;color:#c9d6dd;background:#0f171e;border-top:1px solid #24343f;border-bottom:1px solid #24343f;
+}
+.table-caption-row span{margin-left:8px;color:#879aa6;font-size:10px}
+.sort-help{white-space:nowrap}
+.table-wrap{overflow:auto;background:#080d11;scrollbar-color:#405661 #080d11}
+.all-year-wrap{max-height:64vh}
+.projected-wrap{max-height:68vh}
+.table-wrap::-webkit-scrollbar{height:10px;width:10px}
+.table-wrap::-webkit-scrollbar-track{background:#080d11}
+.table-wrap::-webkit-scrollbar-thumb{background:#405661;border:2px solid #080d11;border-radius:10px}
+table{border-collapse:separate;border-spacing:0;width:max-content;min-width:100%}
+th,td{border-right:1px solid #25343e;border-bottom:1px solid #25343e;padding:7px 8px;white-space:nowrap;font-size:12px}
+th{
+  position:sticky;top:0;z-index:5;background:#17242d;color:#fff;text-align:center;font-weight:850;cursor:pointer;user-select:none;
+}
+th:hover{background:#21323e}
+th.sorted{color:#86dcfa}
+.sortmark{margin-left:4px;color:#77cce9}
+tbody td{background:#0b1116;color:#eaf2f6}
+tbody tr:nth-child(even) td{background:#10171d}
+tbody tr:hover td{background:#17242d}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+td.category,th.category{position:sticky;left:0;z-index:4;min-width:190px;max-width:190px;text-align:left}
+th.category{z-index:7}
+tbody td.category{font-weight:700;background:#0b1116}
+tbody tr:nth-child(even) td.category{background:#10171d}
+tbody tr:hover td.category{background:#17242d}
+tr.total-row td{font-weight:850;color:#fff;background:#121e26}
+tr.total-row:nth-child(even) td{background:#121e26}
+tr.total-row td.category{background:#121e26;color:#7fd8f7}
+tr.grand-row td{font-weight:900;background:#162834;color:#fff;border-bottom-color:#3e7188}
+tr.grand-row td.category{background:#162834;color:#9be7ff}
+
+.projection-info{
+  margin:0 14px 12px;padding:10px 12px;border:1px solid #2a3e4a;border-left:3px solid #2e96c2;border-radius:9px;background:#101820;color:#aebfc9;font-size:11px;
+}
+.projection-info strong{color:#fff}
+#projected-table thead tr:first-child th{top:0;background:#111b22}
+#projected-table thead tr:nth-child(2) th{top:31px;background:#17242d}
+#projected-table thead tr:first-child th.group-blue{color:#85dcfa}
+#projected-table thead tr:first-child th.group-red{color:#ff8aa0}
+#projected-table thead tr:first-child th.group-green{color:#78e0b1}
+.delta-positive{color:#69dda9!important}
+.delta-negative{color:#ff8298!important}
+.delta-neutral{color:#dbe5ea!important}
+
+.definitions{padding:12px 14px;color:#a5b5bf;font-size:11px;line-height:1.5}
+.definitions strong{color:#eaf3f7}
+footer{text-align:center;color:#718692;font-size:10.5px;padding:3px 5px 12px}
+code{background:#17232c;color:#d8eef7;padding:2px 5px;border-radius:4px}
+
+@media(max-width:1350px){
+  .controls-grid{grid-template-columns:1.2fr 1.8fr 1fr 1fr}
+  .quick-ranges{grid-column:span 2}
+  .kpi-grid.six{grid-template-columns:repeat(3,1fr)}
+}
+@media(max-width:760px){
+  .topbar{padding:18px 14px;flex-direction:column;align-items:flex-start}
+  .page{padding:9px}
+  .controls-grid{grid-template-columns:1fr 1fr}
+  .outlet-search,.outlet-select,.quick-ranges{grid-column:span 2}
+  .section-head{align-items:flex-start;flex-direction:column}
+  .kpi-grid.six{grid-template-columns:repeat(2,1fr)}
+  td.category,th.category{min-width:155px;max-width:155px}
+}
