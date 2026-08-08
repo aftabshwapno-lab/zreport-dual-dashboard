@@ -12,6 +12,7 @@ const state = {
   start:"",
   end:"",
   metric:"sales",
+  networkSummaryMonth:"",
   allSort:{key:"category",dir:"asc"},
   projectedSort:{key:"category",dir:"asc"},
 };
@@ -32,10 +33,7 @@ function rangeMonths(){
 }
 function latestRecord(month){ return state.outlet?.months?.[month] || [[],[]]; }
 
-function computeAllRows(month){
-  const rec=latestRecord(month);
-  const sDetail=rec[0] || [];
-  const fDetail=rec[1] || [];
+function computeRowsFromDetail(sDetail=[],fDetail=[]){
   const s=[], f=[];
   state.index.allYearRows.forEach((r,i)=>{
     if(r.kind==="detail"){
@@ -48,11 +46,27 @@ function computeAllRows(month){
   });
   return {sales:s,ff:f,basket:s.map((v,i)=>f[i]?v/f[i]:null)};
 }
+function computeOutletRows(month){
+  const rec=latestRecord(month);
+  return computeRowsFromDetail(rec[0] || [],rec[1] || []);
+}
+function selectedNetworkSummary(){
+  if(!state.networkSummaryMonth) return null;
+  return (state.index.networkMonthSummaries || []).find(x=>x.month===state.networkSummaryMonth) || null;
+}
 function allPeriodData(){
+  const summary=selectedNetworkSummary();
+  if(summary){
+    return {
+      months:[summary.month],
+      monthRows:{[summary.month]:computeRowsFromDetail(summary.sales || [],summary.ff || [])},
+      summary
+    };
+  }
   const months=rangeMonths();
   const monthRows={};
-  months.forEach(m=>monthRows[m]=computeAllRows(m));
-  return {months,monthRows};
+  months.forEach(m=>monthRows[m]=computeOutletRows(m));
+  return {months,monthRows,summary:null};
 }
 function metricLabel(){ return state.metric==="sales"?"Sales":state.metric==="ff"?"FF":"Basket"; }
 function formatMetric(v){
@@ -71,6 +85,14 @@ function renderOutletOptions(){
     $("outlet-select").value=state.selectedCode;
   }
 }
+function renderNetworkMonthOptions(){
+  const summaries=[...(state.index.networkMonthSummaries || [])].sort((a,b)=>a.month.localeCompare(b.month));
+  $("network-month-select").innerHTML=
+    `<option value="">Selected outlet / date range</option>`+
+    summaries.map(s=>`<option value="${esc(s.month)}">${esc(monthLong(s.month))} — ${numFmt.format(s.outletCount || 0)} outlets</option>`).join("");
+  $("network-month-select").value=state.networkSummaryMonth;
+}
+
 async function loadOutlet(code){
   const meta=state.index.outlets.find(o=>o.code===code);
   if(!meta) return;
@@ -85,7 +107,7 @@ function kpi(label,value,note="",cls=""){
   return `<article class="kpi ${cls}"><div class="kpi-label">${esc(label)}</div><div class="kpi-value">${esc(value)}</div><div class="kpi-note">${esc(note)}</div></article>`;
 }
 function renderAllYearKpis(){
-  const {months,monthRows}=allPeriodData();
+  const {months,monthRows,summary}=allPeriodData();
   const gi=state.index.allYearGrandIndex;
   let sales=0,ff=0;
   months.forEach(m=>{sales+=valueNum(monthRows[m].sales[gi]);ff+=valueNum(monthRows[m].ff[gi]);});
@@ -96,7 +118,7 @@ function renderAllYearKpis(){
   const growth=prevSales?latestSales/prevSales-1:null;
   const avg=months.length?sales/months.length:0;
   $("all-year-kpis").innerHTML=[
-    kpi("Period Sales",money(sales),`${months.length} selected month(s)`,"accent"),
+    kpi("Period Sales",money(sales),summary?`${monthLong(summary.month)} · ${numFmt.format(summary.outletCount || 0)} outlets`:`${months.length} selected month(s)`,"accent"),
     kpi("Period FF",money(ff),"Grand Total"),
     kpi("Period Basket",ff?basket(sales/ff):"—","Sales ÷ FF"),
     kpi("Avg Monthly Sales",money(avg),"Selected period"),
@@ -163,7 +185,10 @@ function renderAllYearTable(){
     return `<tr class="${cls}"><td class="category">${esc(def.label)}</td>${months.map(m=>`<td class="num">${esc(formatMetric(monthRows[m][state.metric][index]))}</td>`).join("")}</tr>`;
   }).join("");
 
-  $("all-year-table-summary").textContent=`${months.length} month(s) · ${metricLabel()} · ${state.outlet.code} — ${state.outlet.name}`;
+  const summary=selectedNetworkSummary();
+  $("all-year-table-summary").textContent=summary
+    ? `${monthLong(summary.month)} · ${metricLabel()} · All outlets · ${numFmt.format(summary.outletCount || 0)} outlets`
+    : `${months.length} month(s) · ${metricLabel()} · ${state.outlet.code} — ${state.outlet.name}`;
   $("all-year-head").querySelectorAll("th[data-sort]").forEach(th=>th.addEventListener("click",()=>{
     const key=th.dataset.sort;
     if(state.allSort.key===key) state.allSort.dir=state.allSort.dir==="asc"?"desc":"asc";
@@ -179,8 +204,8 @@ function computeProjectedRows(){
   const priorLastYear=shiftMonth(lastYear,-1);
   const target=shiftMonth(end,1);
 
-  const lastYearAll=computeAllRows(lastYear);
-  const lastMonthAll=computeAllRows(end);
+  const lastYearAll=computeOutletRows(lastYear);
+  const lastMonthAll=computeOutletRows(end);
   const gi=state.index.allYearGrandIndex;
 
   const netLY=state.index.networkTotals[lastYear]||[0,0];
@@ -341,8 +366,13 @@ function setQuickRange(n){
 function renderAll(){
   if(!state.outlet) return;
   validateRange();
-  $("range-pill").textContent=`${monthShort(state.start)} → ${monthShort(state.end)}`;
-  $("all-year-caption").textContent=`${state.outlet.code} — ${state.outlet.name}`;
+  const summary=selectedNetworkSummary();
+  $("range-pill").textContent=summary
+    ? `All outlets · ${monthShort(summary.month)}`
+    : `${monthShort(state.start)} → ${monthShort(state.end)}`;
+  $("all-year-caption").textContent=summary
+    ? `All Outlets — ${monthLong(summary.month)} · ${numFmt.format(summary.outletCount || 0)} outlets`
+    : `${state.outlet.code} — ${state.outlet.name}`;
   renderAllYearKpis();
   renderTrend();
   renderAllYearTable();
@@ -354,6 +384,10 @@ function bind(){
     renderOutletOptions();
   });
   $("outlet-select").addEventListener("change",e=>loadOutlet(e.target.value));
+  $("network-month-select").addEventListener("change",e=>{
+    state.networkSummaryMonth=e.target.value;
+    renderAll();
+  });
   $("date-start").addEventListener("change",e=>{state.start=e.target.value;validateRange();renderAll();});
   $("date-end").addEventListener("change",e=>{state.end=e.target.value;validateRange();renderAll();});
   document.querySelectorAll("[data-range]").forEach(b=>b.addEventListener("click",()=>setQuickRange(b.dataset.range)));
@@ -385,6 +419,7 @@ async function init(){
 
     state.selectedCode=state.index.outlets.find(o=>o.code==="D109")?.code || state.index.outlets[0]?.code || "";
     renderOutletOptions();
+    renderNetworkMonthOptions();
     bind();
     if(state.selectedCode) await loadOutlet(state.selectedCode);
   }catch(err){

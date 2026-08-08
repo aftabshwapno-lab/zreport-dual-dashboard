@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="color-scheme" content="dark">
   <title>Z-Report Dual Dashboard</title>
-  <link rel="stylesheet" href="styles.css?v=zreport-dark-v1">
+  <link rel="stylesheet" href="styles.css?v=zreport-v3-month-summary">
 </head>
 <body>
   <header class="topbar">
@@ -31,6 +31,10 @@
           <span>Select outlet</span>
           <select id="outlet-select"></select>
         </label>
+        <label class="field summary-select">
+          <span>All-outlet month summary</span>
+          <select id="network-month-select"></select>
+        </label>
         <label class="field">
           <span>From month</span>
           <input id="date-start" type="month">
@@ -50,7 +54,7 @@
         </div>
       </div>
       <div class="global-note">
-        One outlet selector controls both dashboards. The date range controls the All Year view; the selected <strong>To month</strong> is also used as the Last Month baseline for the projected dashboard.
+        <strong>Select Outlet</strong> continues to control both dashboards. The separate <strong>All-outlet month summary</strong> dropdown is an optional override for Dashboard 01 only: choose Jan 2021, Feb 2021, etc. to view the workbook's monthly All summary for that month. Choose <strong>Selected outlet / date range</strong> to return Dashboard 01 to the normal outlet view. Date range and all other filters remain unchanged.
       </div>
     </section>
 
@@ -142,6 +146,6 @@
     </footer>
   </main>
 
-  <script src="app.js?v=zreport-dark-v1"></script>
+  <script src="app.js?v=zreport-v3-month-summary"></script>
 </body>
 </html>
