@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="color-scheme" content="dark">
   <title>Z-Report Dual Dashboard</title>
-  <link rel="stylesheet" href="styles.css?v=zreport-v3-month-summary">
+  <link rel="stylesheet" href="styles.css?v=zreport-v4-projection-controls">
 </head>
 <body>
   <header class="topbar">
@@ -112,7 +112,18 @@
           <h2>AUTOMATED PROJECTED ZREPORT</h2>
           <p id="projected-caption">Projection model follows the workbook's existing logic.</p>
         </div>
-        <div class="section-actions">
+        <div class="section-actions projection-actions">
+          <label class="mini-field">
+            <span>Projection scope</span>
+            <select id="projection-scope">
+              <option value="outlet">Selected outlet</option>
+              <option value="all">All outlets</option>
+            </select>
+          </label>
+          <label class="mini-field">
+            <span>Last month</span>
+            <select id="projection-month"></select>
+          </label>
           <button id="download-projected" class="btn primary">Download visible CSV</button>
         </div>
       </div>
@@ -138,7 +149,7 @@
 
     <section class="definitions">
       <strong>Projection logic preserved from the workbook:</strong>
-      the selected To month is treated as Last Month; the projected month is the following month. The projected grand total applies the network's prior-year month-on-month growth factor for the corresponding Last Year reference month, and category projections use the selected outlet's Last Month category mix. Basket = Sales ÷ FF.
+      Dashboard 02 now has its own <strong>Projection scope</strong> and <strong>Last month</strong> controls. Last Year is always 12 months before the chosen Last Month, and Projected is always the following month. For <strong>Selected outlet</strong>, the selected outlet's Last Month category mix is used. For <strong>All outlets</strong>, the workbook's monthly All-outlet summary is used. The projected grand total applies the network's corresponding prior-year month-on-month seasonal factor. Basket = Sales ÷ FF.
     </section>
 
     <footer>
@@ -146,6 +157,6 @@
     </footer>
   </main>
 
-  <script src="app.js?v=zreport-v3-month-summary"></script>
+  <script src="app.js?v=zreport-v4-projection-controls"></script>
 </body>
 </html>

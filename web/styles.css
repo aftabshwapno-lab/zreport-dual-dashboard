@@ -178,3 +178,53 @@ code{background:#17232c;color:#d8eef7;padding:2px 5px;border-radius:4px}
 .summary-select select:focus{
   border-color:#63bde3;
 }
+
+
+/* Dashboard 02 projection controls */
+.projection-actions{
+  align-items:flex-end;
+}
+.mini-field{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  min-width:165px;
+}
+.mini-field span{
+  font-size:9px;
+  text-transform:uppercase;
+  letter-spacing:.5px;
+  font-weight:850;
+  color:#9fb1bd;
+}
+.mini-field select{
+  height:36px;
+  min-width:165px;
+  background:#091016;
+  color:#f7fbfd;
+  border:1px solid #344b59;
+  border-radius:9px;
+  padding:0 9px;
+  outline:none;
+  color-scheme:dark;
+}
+.mini-field select option{
+  background:#091016;
+  color:#f7fbfd;
+}
+.mini-field select:focus{
+  border-color:#4fa9d1;
+  box-shadow:0 0 0 3px rgba(79,169,209,.14);
+}
+
+@media(max-width:900px){
+  .projection-actions{
+    width:100%;
+  }
+  .mini-field{
+    flex:1 1 180px;
+  }
+  .mini-field select{
+    width:100%;
+  }
+}

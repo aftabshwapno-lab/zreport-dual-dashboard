@@ -13,6 +13,8 @@ const state = {
   end:"",
   metric:"sales",
   networkSummaryMonth:"",
+  projectionScope:"outlet",
+  projectionMonth:"",
   allSort:{key:"category",dir:"asc"},
   projectedSort:{key:"category",dir:"asc"},
 };
@@ -54,6 +56,18 @@ function selectedNetworkSummary(){
   if(!state.networkSummaryMonth) return null;
   return (state.index.networkMonthSummaries || []).find(x=>x.month===state.networkSummaryMonth) || null;
 }
+function networkSummaryForMonth(month){
+  return (state.index.networkMonthSummaries || []).find(x=>x.month===month) || null;
+}
+function computeNetworkRows(month){
+  const summary=networkSummaryForMonth(month);
+  if(!summary) return computeRowsFromDetail([],[]);
+  return computeRowsFromDetail(summary.sales || [],summary.ff || []);
+}
+function projectionScopeLabel(){
+  if(state.projectionScope==="all") return "All outlets";
+  return state.outlet ? `${state.outlet.code} — ${state.outlet.name}` : "Selected outlet";
+}
 function allPeriodData(){
   const summary=selectedNetworkSummary();
   if(summary){
@@ -91,6 +105,16 @@ function renderNetworkMonthOptions(){
     `<option value="">Selected outlet / date range</option>`+
     summaries.map(s=>`<option value="${esc(s.month)}">${esc(monthLong(s.month))} — ${numFmt.format(s.outletCount || 0)} outlets</option>`).join("");
   $("network-month-select").value=state.networkSummaryMonth;
+}
+
+function renderProjectionControls(){
+  const months=[...(state.index.actualMonths || [])].sort();
+  $("projection-month").innerHTML=months.map(m=>`<option value="${esc(m)}">${esc(monthLong(m))}</option>`).join("");
+  if(!state.projectionMonth || !months.includes(state.projectionMonth)){
+    state.projectionMonth=state.end || months.at(-1) || "";
+  }
+  $("projection-month").value=state.projectionMonth;
+  $("projection-scope").value=state.projectionScope;
 }
 
 async function loadOutlet(code){
@@ -199,15 +223,17 @@ function renderAllYearTable(){
 function normLabel(v){return String(v||"").trim().toLowerCase().replace(/\s+/g," ");}
 
 function computeProjectedRows(){
-  const end=state.end;
+  const end=state.projectionMonth || state.end;
   const lastYear=shiftMonth(end,-12);
   const priorLastYear=shiftMonth(lastYear,-1);
   const target=shiftMonth(end,1);
 
-  const lastYearAll=computeOutletRows(lastYear);
-  const lastMonthAll=computeOutletRows(end);
+  const useAll=state.projectionScope==="all";
+  const lastYearAll=useAll ? computeNetworkRows(lastYear) : computeOutletRows(lastYear);
+  const lastMonthAll=useAll ? computeNetworkRows(end) : computeOutletRows(end);
   const gi=state.index.allYearGrandIndex;
 
+  // Seasonal factor remains network-based, matching the workbook model.
   const netLY=state.index.networkTotals[lastYear]||[0,0];
   const netPrev=state.index.networkTotals[priorLastYear]||[0,0];
   const seasonSales=netPrev[0]?netLY[0]/netPrev[0]-1:null;
@@ -223,9 +249,8 @@ function computeProjectedRows(){
   );
 
   const result=[];
-  const byExcelRow=new Map();
 
-  state.index.projectedRows.forEach((r,idx)=>{
+  state.index.projectedRows.forEach((r)=>{
     let vals;
     if(r.kind==="detail"){
       const ay=detailRowsByLabel.get(normLabel(r.label));
@@ -236,23 +261,39 @@ function computeProjectedRows(){
       const lmF=ai===undefined?0:valueNum(lastMonthAll.ff[ai]);
       const pS=lmGrandSales?lmS/lmGrandSales*projectedGrandSales:0;
       const pF=lmGrandFF?lmF/lmGrandFF*projectedGrandFF:0;
-      vals={lyS,lyF,lyB:lyF?lyS/lyF:null,lmS,lmF,lmB:lmF?lmS/lmF:null,pS,pF,pB:pF?pS/pF:null,con:lmGrandSales?lmS/lmGrandSales:0};
+      vals={
+        lyS,lyF,lyB:lyF?lyS/lyF:null,
+        lmS,lmF,lmB:lmF?lmS/lmF:null,
+        pS,pF,pB:pF?pS/pF:null,
+        con:lmGrandSales?lmS/lmGrandSales:0
+      };
     }else{
       const deps=(r.deps||[]).map(d=>result[d]).filter(Boolean);
       const sum=k=>deps.reduce((a,x)=>a+valueNum(x[k]),0);
-      const lyS=sum("lyS"),lyF=sum("lyF"),lmS=sum("lmS"),lmF=sum("lmF"),pS=sum("pS"),pF=sum("pF");
-      vals={lyS,lyF,lyB:lyF?lyS/lyF:null,lmS,lmF,lmB:lmF?lmS/lmF:null,pS,pF,pB:pF?pS/pF:null,con:lmGrandSales?lmS/lmGrandSales:0};
+      const lyS=sum("lyS"),lyF=sum("lyF"),
+            lmS=sum("lmS"),lmF=sum("lmF"),
+            pS=sum("pS"),pF=sum("pF");
+      vals={
+        lyS,lyF,lyB:lyF?lyS/lyF:null,
+        lmS,lmF,lmB:lmF?lmS/lmF:null,
+        pS,pF,pB:pF?pS/pF:null,
+        con:lmGrandSales?lmS/lmGrandSales:0
+      };
     }
     vals.dS=vals.pS-vals.lyS;
     vals.dF=vals.pF-vals.lyF;
     vals.dB=(vals.pB===null||vals.lyB===null)?null:vals.pB-vals.lyB;
     result.push({...r,...vals});
-    byExcelRow.set(r.excelRow,result.at(-1));
   });
 
   const grand=result.find(r=>normLabel(r.label)==="grand total") || result.at(-1);
-  return {rows:result,grand,lastYear,priorLastYear,lastMonth:end,target,seasonSales,seasonFF,projectedGrandSales,projectedGrandFF};
+  return {
+    rows:result,grand,lastYear,priorLastYear,lastMonth:end,target,
+    seasonSales,seasonFF,projectedGrandSales,projectedGrandFF,
+    scope:useAll?"all":"outlet"
+  };
 }
+
 function renderProjected(){
   const p=computeProjectedRows();
   const overallGrowth=p.grand.lyS?p.grand.pS/p.grand.lyS-1:null;
@@ -267,8 +308,9 @@ function renderProjected(){
     kpi("Network Seasonal Factor",p.seasonSales===null?"—":pct(p.seasonSales),`${monthLong(p.lastYear)} vs ${monthLong(p.priorLastYear)}`),
   ].join("");
 
-  $("projected-caption").textContent=`${state.outlet.code} — ${state.outlet.name}`;
-  $("projection-info").innerHTML=`<strong>Last Year:</strong> ${esc(monthLong(p.lastYear))} &nbsp; | &nbsp; <strong>Last Month:</strong> ${esc(monthLong(p.lastMonth))} &nbsp; | &nbsp; <strong>Projected:</strong> ${esc(monthLong(p.target))} &nbsp; | &nbsp; Network seasonal Sales factor: <strong>${esc(p.seasonSales===null?"N/A":pct(p.seasonSales))}</strong> · FF factor: <strong>${esc(p.seasonFF===null?"N/A":pct(p.seasonFF))}</strong>`;
+  const scopeLabel=projectionScopeLabel();
+  $("projected-caption").textContent=`${scopeLabel} · Last Month: ${monthLong(p.lastMonth)}`;
+  $("projection-info").innerHTML=`<strong>Scope:</strong> ${esc(scopeLabel)} &nbsp; | &nbsp; <strong>Last Year:</strong> ${esc(monthLong(p.lastYear))} &nbsp; | &nbsp; <strong>Last Month:</strong> ${esc(monthLong(p.lastMonth))} &nbsp; | &nbsp; <strong>Projected:</strong> ${esc(monthLong(p.target))} &nbsp; | &nbsp; Network seasonal Sales factor: <strong>${esc(p.seasonSales===null?"N/A":pct(p.seasonSales))}</strong> · FF factor: <strong>${esc(p.seasonFF===null?"N/A":pct(p.seasonFF))}</strong>`;
 
   renderProjectedTable(p);
 }
@@ -317,7 +359,7 @@ function renderProjectedTable(p){
     }).join("")}</tr>`;
   }).join("");
 
-  $("projected-table-summary").textContent=`${p.rows.length} rows · ${state.outlet.code} — ${state.outlet.name}`;
+  $("projected-table-summary").textContent=`${p.rows.length} rows · ${projectionScopeLabel()} · Last Month ${monthLong(p.lastMonth)}`;
   $("projected-head").querySelectorAll("th[data-sort]").forEach(th=>th.addEventListener("click",()=>{
     const key=th.dataset.sort;
     if(state.projectedSort.key===key) state.projectedSort.dir=state.projectedSort.dir==="asc"?"desc":"asc";
@@ -340,7 +382,8 @@ function downloadProjected(){
   const headers=projectedColumns.map(c=>c[1]);
   const lines=[headers.map(csvCell).join(",")];
   p.rows.forEach(r=>lines.push(projectedColumns.map(([k])=>csvCell(projectedCell(r,k))).join(",")));
-  saveCsv(lines.join("\r\n"),`projected_zreport_${state.selectedCode}_${p.target}.csv`);
+  const scopeName=state.projectionScope==="all"?"ALL_OUTLETS":state.selectedCode;
+  saveCsv(lines.join("\r\n"),`projected_zreport_${scopeName}_${p.lastMonth}_to_${p.target}.csv`);
 }
 function saveCsv(text,name){
   const blob=new Blob(["\ufeff"+text],{type:"text/csv;charset=utf-8"});
@@ -388,8 +431,22 @@ function bind(){
     state.networkSummaryMonth=e.target.value;
     renderAll();
   });
+  $("projection-scope").addEventListener("change",e=>{
+    state.projectionScope=e.target.value;
+    renderProjected();
+  });
+  $("projection-month").addEventListener("change",e=>{
+    state.projectionMonth=e.target.value;
+    renderProjected();
+  });
   $("date-start").addEventListener("change",e=>{state.start=e.target.value;validateRange();renderAll();});
-  $("date-end").addEventListener("change",e=>{state.end=e.target.value;validateRange();renderAll();});
+  $("date-end").addEventListener("change",e=>{
+    state.end=e.target.value;
+    validateRange();
+    state.projectionMonth=state.end;
+    renderProjectionControls();
+    renderAll();
+  });
   document.querySelectorAll("[data-range]").forEach(b=>b.addEventListener("click",()=>setQuickRange(b.dataset.range)));
   $("metric-tabs").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{
     state.metric=b.dataset.metric;
@@ -407,6 +464,7 @@ async function init(){
     state.index=await res.json();
     state.start=state.index.defaultRange.start;
     state.end=state.index.defaultRange.end;
+    state.projectionMonth=state.end;
     $("date-start").min=state.index.meta.earliestActualMonth;
     $("date-start").max=state.index.meta.latestActualMonth;
     $("date-end").min=state.index.meta.earliestActualMonth;
@@ -420,6 +478,7 @@ async function init(){
     state.selectedCode=state.index.outlets.find(o=>o.code==="D109")?.code || state.index.outlets[0]?.code || "";
     renderOutletOptions();
     renderNetworkMonthOptions();
+    renderProjectionControls();
     bind();
     if(state.selectedCode) await loadOutlet(state.selectedCode);
   }catch(err){
