@@ -657,7 +657,13 @@ function renderAll(){
   renderProjected();
 }
 function bind(){
-  $("outlet-search").addEventListener("input",renderOutletSuggestions);
+  $("outlet-search").addEventListener("input",()=>{
+    if(!$("outlet-search").value.trim()){
+      hideOutletSuggestions();
+      return;
+    }
+    renderOutletSuggestions();
+  });
   $("outlet-search").addEventListener("focus",()=>{
     if($("outlet-search").value.trim()) renderOutletSuggestions();
   });
@@ -761,7 +767,13 @@ async function init(){
     renderNetworkMonthOptions();
     renderProjectionControls();
     bind();
-    if(state.selectedCode) await loadOutlet(state.selectedCode);
+    if(state.selectedCode){
+      await loadOutlet(state.selectedCode);
+      // Keep a default dashboard outlet internally, but do not prefill
+      // the search field. The user sees the requested placeholder instead.
+      $("outlet-search").value="";
+      hideOutletSuggestions();
+    }
   }catch(err){
     document.body.innerHTML=`<div style="padding:36px;font-family:Segoe UI,Arial;background:#070a0d;color:#fff;min-height:100vh"><h2>Dashboard could not load</h2><p>${esc(err.message)}</p><p>Run <code>python scripts/build.py</code> and deploy the generated <code>site</code> folder.</p></div>`;
   }
