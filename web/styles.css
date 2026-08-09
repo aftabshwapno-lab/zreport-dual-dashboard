@@ -40,7 +40,7 @@ button,input,select{font:inherit}
 .global-panel{padding:14px;margin-bottom:14px}
 .controls-grid{
   display:grid;
-  grid-template-columns:1.35fr 1.85fr 1.75fr .9fr .9fr 1.35fr;
+  grid-template-columns:2.15fr 2.05fr 1fr 1fr 1.55fr;
   gap:10px;align-items:end;
 }
 .field{display:flex;flex-direction:column;gap:5px;min-width:0}
@@ -164,7 +164,7 @@ code{background:#17232c;color:#d8eef7;padding:2px 5px;border-radius:4px}
   .topbar{padding:18px 14px;flex-direction:column;align-items:flex-start}
   .page{padding:9px}
   .controls-grid{grid-template-columns:1fr 1fr}
-  .outlet-search,.outlet-select,.summary-select,.quick-ranges{grid-column:span 2}
+  .outlet-search,.summary-select,.quick-ranges{grid-column:span 2}
   .section-head{align-items:flex-start;flex-direction:column}
   .kpi-grid.six{grid-template-columns:repeat(2,1fr)}
   td.category,th.category{min-width:155px;max-width:155px}
@@ -268,4 +268,31 @@ code{background:#17232c;color:#d8eef7;padding:2px 5px;border-radius:4px}
     top:4px !important;
     max-height:calc(100vh - 8px);
   }
+}
+
+/* v6 search-only autocomplete */
+.autocomplete-field{position:relative}
+.autocomplete-wrap{position:relative;width:100%}
+.autocomplete-wrap input{width:100%}
+.search-suggestions{
+  position:absolute;left:0;right:0;top:calc(100% + 5px);z-index:160;
+  max-height:360px;overflow-y:auto;background:#071016;border:1px solid #3b5968;
+  border-radius:10px;box-shadow:0 16px 38px rgba(0,0,0,.58);
+}
+.suggestion-item{
+  width:100%;min-height:44px;border:0;border-bottom:1px solid #1c2b34;
+  background:#0b141b;color:#f4f8fb;text-align:left;padding:7px 10px;
+  display:grid;grid-template-columns:82px minmax(0,1fr);gap:10px;align-items:center;cursor:pointer;
+}
+.suggestion-item:hover,.suggestion-item:focus{background:#173040;outline:none}
+.suggestion-code{color:#7dd9f7;font-weight:900}
+.suggestion-name{color:#edf5f8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.suggestion-empty,.suggestion-more{padding:10px 12px;color:#9fb2bd;background:#0b141b;font-size:11px}
+.suggestion-more{border-top:1px solid #253640;color:#7f98a5}
+@media(max-width:1350px){
+  .controls-grid{grid-template-columns:1.5fr 1.5fr 1fr 1fr}
+  .quick-ranges{grid-column:span 2}
+}
+@media(max-width:760px){
+  .autocomplete-field{grid-column:span 2}
 }

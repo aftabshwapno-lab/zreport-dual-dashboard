@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="color-scheme" content="dark">
   <title>Z-Report Dual Dashboard</title>
-  <link rel="stylesheet" href="styles.css?v=zreport-v5-sticky-bd-format-20260809">
+  <link rel="stylesheet" href="styles.css?v=zreport-v6-search">
 </head>
 <body>
   <header class="topbar">
@@ -23,14 +23,13 @@
   <main class="page">
     <section class="global-panel">
       <div class="controls-grid">
-        <label class="field outlet-search">
-          <span>Search outlet</span>
-          <input id="outlet-search" type="search" placeholder="Type code or outlet name">
-        </label>
-        <label class="field outlet-select">
-          <span>Select outlet</span>
-          <select id="outlet-select"></select>
-        </label>
+        <div class="field outlet-search autocomplete-field">
+          <span>Search anything</span>
+          <div class="autocomplete-wrap">
+            <input id="outlet-search" type="search" autocomplete="off" placeholder="Type outlet code or any part of outlet name">
+            <div id="search-suggestions" class="search-suggestions hidden" role="listbox"></div>
+          </div>
+        </div>
         <label class="field summary-select">
           <span>All-outlet month summary</span>
           <select id="network-month-select"></select>
@@ -54,7 +53,7 @@
         </div>
       </div>
       <div class="global-note">
-        <strong>Select Outlet</strong> continues to control both dashboards. The separate <strong>All-outlet month summary</strong> dropdown is an optional override for Dashboard 01 only: choose Jan 2021, Feb 2021, etc. to view the workbook's monthly All summary for that month. Choose <strong>Selected outlet / date range</strong> to return Dashboard 01 to the normal outlet view. Date range and all other filters remain unchanged.
+        <strong>Search anything</strong> replaces the old Select Outlet dropdown. Type any outlet code or any part of an outlet name and matching results appear instantly underneath. Click a result to load that outlet in both dashboards. The All-outlet Month Summary and all other controls remain unchanged.
       </div>
     </section>
 
@@ -157,6 +156,6 @@
     </footer>
   </main>
 
-  <script src="app.js?v=zreport-v5-sticky-bd-format-20260809"></script>
+  <script src="app.js?v=zreport-v6-search"></script>
 </body>
 </html>

@@ -110,17 +110,57 @@ function formatMetric(v){
   return money(v);
 }
 
-function renderOutletOptions(){
-  const search=state.search.trim().toLowerCase();
-  const list=state.index.outlets.filter(o=>!search || `${o.code} ${o.name}`.toLowerCase().includes(search));
-  const current=state.selectedCode;
-  $("outlet-select").innerHTML=list.map(o=>`<option value="${esc(o.code)}">${esc(o.code)} — ${esc(o.name)}</option>`).join("");
-  if(list.some(o=>o.code===current)) $("outlet-select").value=current;
-  else if(list.length){
-    state.selectedCode=list[0].code;
-    $("outlet-select").value=state.selectedCode;
-  }
+function outletSearchText(o){
+  return `${o.code} ${o.name}`.toLowerCase();
 }
+function matchingOutlets(query){
+  const q=String(query||"").trim().toLowerCase();
+  if(!q) return [];
+  const terms=q.split(/\s+/).filter(Boolean);
+  return state.index.outlets
+    .filter(o=>terms.every(t=>outletSearchText(o).includes(t)))
+    .sort((a,b)=>{
+      const ac=a.code.toLowerCase(), bc=b.code.toLowerCase();
+      const an=a.name.toLowerCase(), bn=b.name.toLowerCase();
+      const as=ac===q?0:ac.startsWith(q)?1:an.startsWith(q)?2:3;
+      const bs=bc===q?0:bc.startsWith(q)?1:bn.startsWith(q)?2:3;
+      return as-bs || a.code.localeCompare(b.code,undefined,{numeric:true,sensitivity:"base"});
+    });
+}
+function hideSuggestions(){
+  $("search-suggestions").classList.add("hidden");
+  $("search-suggestions").innerHTML="";
+}
+function renderSearchSuggestions(){
+  const q=$("outlet-search").value.trim();
+  if(!q){ hideSuggestions(); return; }
+  const matches=matchingOutlets(q);
+  const box=$("search-suggestions");
+  if(!matches.length){
+    box.innerHTML=`<div class="suggestion-empty">No matching outlet found</div>`;
+    box.classList.remove("hidden");
+    return;
+  }
+  const visible=matches.slice(0,40);
+  box.innerHTML=visible.map(o=>`
+    <button type="button" class="suggestion-item" data-code="${esc(o.code)}">
+      <span class="suggestion-code">${esc(o.code)}</span>
+      <span class="suggestion-name">${esc(o.name)}</span>
+    </button>`).join("")+
+    (matches.length>40?`<div class="suggestion-more">${numFmt.format(matches.length-40)} more — keep typing to narrow</div>`:"");
+  box.classList.remove("hidden");
+  box.querySelectorAll(".suggestion-item").forEach(b=>b.addEventListener("mousedown",e=>{
+    e.preventDefault(); selectSearchOutlet(b.dataset.code);
+  }));
+}
+function selectSearchOutlet(code){
+  const o=state.index.outlets.find(x=>x.code===code);
+  if(!o) return;
+  $("outlet-search").value=`${o.code} — ${o.name}`;
+  hideSuggestions();
+  loadOutlet(code);
+}
+
 function renderNetworkMonthOptions(){
   const summaries=[...(state.index.networkMonthSummaries || [])].sort((a,b)=>a.month.localeCompare(b.month));
   $("network-month-select").innerHTML=
@@ -142,6 +182,7 @@ function renderProjectionControls(){
 async function loadOutlet(code){
   const meta=state.index.outlets.find(o=>o.code===code);
   if(!meta) return;
+  $("outlet-search").value=`${meta.code} — ${meta.name}`;
   const res=await fetch(meta.file,{cache:"no-store"});
   if(!res.ok) throw new Error(`Could not load outlet ${code}`);
   state.outlet=await res.json();
@@ -451,11 +492,18 @@ function renderAll(){
   renderProjected();
 }
 function bind(){
-  $("outlet-search").addEventListener("input",e=>{
-    state.search=e.target.value;
-    renderOutletOptions();
+  $("outlet-search").addEventListener("input",renderSearchSuggestions);
+  $("outlet-search").addEventListener("focus",()=>{ if($("outlet-search").value.trim()) renderSearchSuggestions(); });
+  $("outlet-search").addEventListener("keydown",e=>{
+    if(e.key==="Escape"){ hideSuggestions(); return; }
+    if(e.key==="Enter"){
+      const first=$("search-suggestions").querySelector(".suggestion-item");
+      if(first){ e.preventDefault(); selectSearchOutlet(first.dataset.code); }
+    }
   });
-  $("outlet-select").addEventListener("change",e=>loadOutlet(e.target.value));
+  document.addEventListener("mousedown",e=>{
+    if(!e.target.closest(".autocomplete-wrap")) hideSuggestions();
+  });
   $("network-month-select").addEventListener("change",e=>{
     state.networkSummaryMonth=e.target.value;
     renderAll();
@@ -505,7 +553,6 @@ async function init(){
     $("source-pill").title=`Actual months: ${state.index.meta.earliestActualMonth} to ${state.index.meta.latestActualMonth}\nAll Year header horizon includes ${state.index.meta.futureHeaderMonthCount} future month(s).`;
 
     state.selectedCode=state.index.outlets.find(o=>o.code==="D109")?.code || state.index.outlets[0]?.code || "";
-    renderOutletOptions();
     renderNetworkMonthOptions();
     renderProjectionControls();
     bind();
