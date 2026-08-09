@@ -416,3 +416,10 @@ code{background:#17232c;color:#d8eef7;padding:2px 5px;border-radius:4px}
     grid-column:span 2;
   }
 }
+
+
+/* v9 — Projection controls remain manually editable after automatic top-control sync */
+#projection-scope,
+#projection-month{
+  cursor:pointer;
+}

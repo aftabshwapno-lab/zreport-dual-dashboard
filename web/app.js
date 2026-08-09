@@ -255,12 +255,14 @@ function selectSearchCategory(label){
   state.categoryFocus=row.label;
   $("category-search").value=row.label;
   hideCategorySuggestions();
+  syncProjectionFromTopControls();
   renderAll();
 }
 
 function clearCategoryFocus(){
   if(!state.categoryFocus) return;
   state.categoryFocus="";
+  syncProjectionFromTopControls();
   renderAll();
 }
 
@@ -298,6 +300,32 @@ function renderProjectionControls(){
   $("projection-scope").value=state.projectionScope;
 }
 
+/*
+  Auto-sync rule:
+  - Real outlet selection => Projection Scope = Selected outlet.
+  - All-outlet Month Summary selection => Projection Scope = All outlets
+    and Projection Last Month = that selected summary month.
+  - Returning All-outlet Month Summary to "Selected outlet / date range"
+    => Projection Scope = Selected outlet and Last Month = current To Month.
+  - Category selection keeps the same scope/month context, but refreshes
+    Dashboard 02 for that category.
+  Manual Projection Scope / Last Month changes remain possible afterward.
+  A later change in the top command-center controls auto-syncs again.
+*/
+function syncProjectionFromTopControls(){
+  const summary=selectedNetworkSummary();
+
+  if(summary){
+    state.projectionScope="all";
+    state.projectionMonth=summary.month;
+  }else{
+    state.projectionScope="outlet";
+    state.projectionMonth=state.end;
+  }
+
+  renderProjectionControls();
+}
+
 async function loadOutlet(code){
   const meta=state.index.outlets.find(o=>o.code===code);
   if(!meta) return;
@@ -306,6 +334,7 @@ async function loadOutlet(code){
   if(!res.ok) throw new Error(`Could not load outlet ${code}`);
   state.outlet=await res.json();
   state.selectedCode=code;
+  syncProjectionFromTopControls();
   renderAll();
 }
 
@@ -609,6 +638,7 @@ function setQuickRange(n){
   if(n==="all") state.start=state.index.meta.earliestActualMonth;
   else state.start=shiftMonth(end,-(Number(n)-1));
   validateRange();
+  syncProjectionFromTopControls();
   renderAll();
 }
 function renderAll(){
@@ -676,6 +706,7 @@ function bind(){
   });
   $("network-month-select").addEventListener("change",e=>{
     state.networkSummaryMonth=e.target.value;
+    syncProjectionFromTopControls();
     renderAll();
   });
   $("projection-scope").addEventListener("change",e=>{
@@ -686,12 +717,16 @@ function bind(){
     state.projectionMonth=e.target.value;
     renderProjected();
   });
-  $("date-start").addEventListener("change",e=>{state.start=e.target.value;validateRange();renderAll();});
+  $("date-start").addEventListener("change",e=>{
+    state.start=e.target.value;
+    validateRange();
+    syncProjectionFromTopControls();
+    renderAll();
+  });
   $("date-end").addEventListener("change",e=>{
     state.end=e.target.value;
     validateRange();
-    state.projectionMonth=state.end;
-    renderProjectionControls();
+    syncProjectionFromTopControls();
     renderAll();
   });
   document.querySelectorAll("[data-range]").forEach(b=>b.addEventListener("click",()=>setQuickRange(b.dataset.range)));
