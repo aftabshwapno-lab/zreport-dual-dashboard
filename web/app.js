@@ -656,6 +656,45 @@ function renderAll(){
   renderAllYearTable();
   renderProjected();
 }
+function resetAllFilters(){
+  // Restore original dashboard defaults.
+  state.start=state.index.defaultRange.start;
+  state.end=state.index.defaultRange.end;
+  state.networkSummaryMonth="";
+  state.categoryFocus="";
+  state.projectionScope="outlet";
+  state.projectionMonth=state.end;
+
+  // Return to the default internal outlet used by the dashboard.
+  const defaultCode=state.index.outlets.find(o=>o.code==="D109")?.code || state.index.outlets[0]?.code || "";
+  state.selectedCode=defaultCode;
+
+  // Clear visible search inputs.
+  $("outlet-search").value="";
+  $("category-search").value="";
+  hideOutletSuggestions();
+  hideCategorySuggestions();
+
+  // Restore top controls.
+  $("network-month-select").value="";
+  $("date-start").value=state.start;
+  $("date-end").value=state.end;
+
+  renderNetworkMonthOptions();
+  renderProjectionControls();
+
+  if(defaultCode){
+    loadOutlet(defaultCode).then(()=>{
+      // loadOutlet writes the selected outlet into the search field; clear it again
+      // so Reset returns to the blank "Enter outlet code/name" state.
+      $("outlet-search").value="";
+      hideOutletSuggestions();
+    });
+  }else{
+    renderAll();
+  }
+}
+
 function bind(){
   $("outlet-search").addEventListener("input",()=>{
     if(!$("outlet-search").value.trim()){
@@ -710,6 +749,8 @@ function bind(){
     if(!e.target.closest(".outlet-search")) hideOutletSuggestions();
     if(!e.target.closest(".category-search")) hideCategorySuggestions();
   });
+  $("reset-filters").addEventListener("click",resetAllFilters);
+
   $("network-month-select").addEventListener("change",e=>{
     state.networkSummaryMonth=e.target.value;
     syncProjectionFromTopControls();

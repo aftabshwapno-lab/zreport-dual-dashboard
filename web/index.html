@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="color-scheme" content="dark">
   <title>Z-Report Dual Dashboard</title>
-  <link rel="stylesheet" href="styles.css?v=zreport-v10-blank-outlet-search-20260809">
+  <link rel="stylesheet" href="styles.css?v=zreport-v11-reset-filter-20260809">
 </head>
 <body>
   <header class="topbar">
@@ -59,9 +59,14 @@
             <button class="btn ghost" data-range="all">All</button>
           </div>
         </div>
+
+        <div class="reset-control">
+          <span>Reset</span>
+          <button id="reset-filters" class="btn reset-btn" type="button">Reset filters</button>
+        </div>
       </div>
       <div class="global-note">
-        <strong>Outlet Search</strong> and <strong>Category Search</strong> now work independently. Select an outlet by code/name, then optionally select a category to focus both dashboards on that category for the same outlet. Changing the outlet keeps the selected category active, which makes outlet-to-outlet category comparison easier. Clear the Category Search box to return to all categories.
+        <strong>Outlet Search</strong> and <strong>Category Search</strong> work independently. Select an outlet by code/name, then optionally select a category. <strong>Reset filters</strong> restores the default date range, clears both search boxes and category focus, returns All-outlet Month Summary to its default, and resets Dashboard 02 Projection Scope/Last Month.
       </div>
     </section>
 
@@ -164,6 +169,6 @@
     </footer>
   </main>
 
-  <script src="app.js?v=zreport-v10-blank-outlet-search-20260809"></script>
+  <script src="app.js?v=zreport-v11-reset-filter-20260809"></script>
 </body>
 </html>
