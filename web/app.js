@@ -8,6 +8,7 @@ const state = {
   outlet:null,
   selectedCode:"",
   search:"",
+  categoryFocus:"",
   start:"",
   end:"",
   metric:"sales",
@@ -127,38 +128,118 @@ function matchingOutlets(query){
       return as-bs || a.code.localeCompare(b.code,undefined,{numeric:true,sensitivity:"base"});
     });
 }
+
+function searchableCategories(){
+  return (state.index.allYearRows || [])
+    .filter(r=>normLabel(r.label)!=="grand total")
+    .map(r=>({label:r.label,kind:r.kind}));
+}
+function matchingCategories(query){
+  const q=String(query||"").trim().toLowerCase();
+  if(!q) return [];
+  const terms=q.split(/\s+/).filter(Boolean);
+  return searchableCategories()
+    .filter(c=>terms.every(t=>c.label.toLowerCase().includes(t)))
+    .sort((a,b)=>{
+      const al=a.label.toLowerCase(), bl=b.label.toLowerCase();
+      const as=al===q?0:al.startsWith(q)?1:2;
+      const bs=bl===q?0:bl.startsWith(q)?1:2;
+      return as-bs || a.label.localeCompare(b.label,undefined,{sensitivity:"base"});
+    });
+}
+
 function hideSuggestions(){
   $("search-suggestions").classList.add("hidden");
   $("search-suggestions").innerHTML="";
 }
+
 function renderSearchSuggestions(){
   const q=$("outlet-search").value.trim();
   if(!q){ hideSuggestions(); return; }
-  const matches=matchingOutlets(q);
+
+  const outlets=matchingOutlets(q);
+  const categories=matchingCategories(q);
   const box=$("search-suggestions");
-  if(!matches.length){
-    box.innerHTML=`<div class="suggestion-empty">No matching outlet found</div>`;
+
+  if(!outlets.length && !categories.length){
+    box.innerHTML=`<div class="suggestion-empty">No matching outlet or category found</div>`;
     box.classList.remove("hidden");
     return;
   }
-  const visible=matches.slice(0,40);
-  box.innerHTML=visible.map(o=>`
-    <button type="button" class="suggestion-item" data-code="${esc(o.code)}">
-      <span class="suggestion-code">${esc(o.code)}</span>
-      <span class="suggestion-name">${esc(o.name)}</span>
-    </button>`).join("")+
-    (matches.length>40?`<div class="suggestion-more">${numFmt.format(matches.length-40)} more — keep typing to narrow</div>`:"");
+
+  const outletVisible=outlets.slice(0,25);
+  const categoryVisible=categories.slice(0,20);
+  let html="";
+
+  if(outletVisible.length){
+    html+=`<div class="suggestion-group-title">OUTLETS</div>`;
+    html+=outletVisible.map(o=>`
+      <button type="button" class="suggestion-item suggestion-outlet" data-type="outlet" data-code="${esc(o.code)}">
+        <span class="suggestion-badge outlet-badge">OUTLET</span>
+        <span class="suggestion-main">
+          <strong>${esc(o.code)}</strong>
+          <span>${esc(o.name)}</span>
+        </span>
+      </button>`).join("");
+    if(outlets.length>outletVisible.length){
+      html+=`<div class="suggestion-more">${numFmt.format(outlets.length-outletVisible.length)} more outlet result(s) — keep typing to narrow</div>`;
+    }
+  }
+
+  if(categoryVisible.length){
+    html+=`<div class="suggestion-group-title">CATEGORIES</div>`;
+    html+=categoryVisible.map(c=>`
+      <button type="button" class="suggestion-item suggestion-category" data-type="category" data-label="${esc(c.label)}">
+        <span class="suggestion-badge category-badge">${c.kind==="total"?"GROUP":"CATEGORY"}</span>
+        <span class="suggestion-main">
+          <strong>${esc(c.label)}</strong>
+          <span>${c.kind==="total"?"Category group / total":"Category performance"}</span>
+        </span>
+      </button>`).join("");
+  }
+
+  box.innerHTML=html;
   box.classList.remove("hidden");
-  box.querySelectorAll(".suggestion-item").forEach(b=>b.addEventListener("mousedown",e=>{
-    e.preventDefault(); selectSearchOutlet(b.dataset.code);
-  }));
+
+  box.querySelectorAll(".suggestion-item").forEach(btn=>{
+    btn.addEventListener("mousedown",e=>{
+      e.preventDefault();
+      if(btn.dataset.type==="category") selectSearchCategory(btn.dataset.label);
+      else selectSearchOutlet(btn.dataset.code);
+    });
+  });
 }
+
 function selectSearchOutlet(code){
   const o=state.index.outlets.find(x=>x.code===code);
   if(!o) return;
+  state.categoryFocus="";
   $("outlet-search").value=`${o.code} — ${o.name}`;
   hideSuggestions();
   loadOutlet(code);
+}
+
+function selectSearchCategory(label){
+  const row=(state.index.allYearRows || []).find(r=>normLabel(r.label)===normLabel(label));
+  if(!row) return;
+  state.categoryFocus=row.label;
+  $("outlet-search").value=`Category — ${row.label}`;
+  hideSuggestions();
+  renderAll();
+}
+
+function focusedAllYearIndex(){
+  if(!state.categoryFocus) return state.index.allYearGrandIndex;
+  const idx=(state.index.allYearRows || []).findIndex(r=>normLabel(r.label)===normLabel(state.categoryFocus));
+  return idx>=0 ? idx : state.index.allYearGrandIndex;
+}
+function focusedAllYearLabel(){
+  if(!state.categoryFocus) return "Grand Total";
+  return state.categoryFocus;
+}
+function focusedProjectedRow(p){
+  if(!state.categoryFocus) return p.grand;
+  return p.rows.find(r=>normLabel(r.label)===normLabel(state.categoryFocus)) || p.grand;
 }
 
 function renderNetworkMonthOptions(){
@@ -195,20 +276,21 @@ function kpi(label,value,note="",cls=""){
 }
 function renderAllYearKpis(){
   const {months,monthRows,summary}=allPeriodData();
-  const gi=state.index.allYearGrandIndex;
+  const fi=focusedAllYearIndex();
+  const focus=focusedAllYearLabel();
   let sales=0,ff=0;
-  months.forEach(m=>{sales+=valueNum(monthRows[m].sales[gi]);ff+=valueNum(monthRows[m].ff[gi]);});
+  months.forEach(m=>{sales+=valueNum(monthRows[m].sales[fi]);ff+=valueNum(monthRows[m].ff[fi]);});
   const latest=months.at(-1);
   const prev=months.length>1?months.at(-2):null;
-  const latestSales=latest?valueNum(monthRows[latest].sales[gi]):0;
-  const prevSales=prev?valueNum(monthRows[prev].sales[gi]):0;
+  const latestSales=latest?valueNum(monthRows[latest].sales[fi]):0;
+  const prevSales=prev?valueNum(monthRows[prev].sales[fi]):0;
   const growth=prevSales?latestSales/prevSales-1:null;
   const avg=months.length?sales/months.length:0;
   $("all-year-kpis").innerHTML=[
-    kpi("Period Sales",money(sales),summary?`${monthLong(summary.month)} · ${numFmt.format(summary.outletCount || 0)} outlets`:`${months.length} selected month(s)`,"accent"),
-    kpi("Period FF",money(ff),"Grand Total"),
+    kpi("Period Sales",money(sales),summary?`${focus} · ${monthLong(summary.month)}`:`${focus} · ${months.length} month(s)`,"accent"),
+    kpi("Period FF",money(ff),focus),
     kpi("Period Basket",ff?basket(sales/ff):"—","Sales ÷ FF"),
-    kpi("Avg Monthly Sales",money(avg),"Selected period"),
+    kpi("Avg Monthly Sales",money(avg),focus),
     kpi("Latest Month Sales",money(latestSales),latest?monthLong(latest):""),
     kpi("Latest MoM Growth",growth===null?"—":pct(growth),prev?`vs ${monthLong(prev)}`:"",growth!==null&&growth>=0?"good":"warn"),
   ].join("");
@@ -216,9 +298,10 @@ function renderAllYearKpis(){
 
 function renderTrend(){
   const {months,monthRows}=allPeriodData();
-  const gi=state.index.allYearGrandIndex;
-  const values=months.map(m=>monthRows[m][state.metric][gi]);
-  $("trend-title").textContent=`Monthly ${metricLabel()} — Grand Total`;
+  const fi=focusedAllYearIndex();
+  const focus=focusedAllYearLabel();
+  const values=months.map(m=>monthRows[m][state.metric][fi]);
+  $("trend-title").textContent=`Monthly ${metricLabel()} — ${focus}`;
   $("trend-value").textContent=values.length?formatMetric(values.at(-1)):"—";
   if(!values.length){
     $("trend-chart").innerHTML=`<div class="empty">No months in selected range.</div>`;return;
@@ -252,7 +335,10 @@ function compare(a,b){
 }
 function renderAllYearTable(){
   const {months,monthRows}=allPeriodData();
-  const rows=state.index.allYearRows.map((r,i)=>({def:r,index:i}));
+  let rows=state.index.allYearRows.map((r,i)=>({def:r,index:i}));
+  if(state.categoryFocus){
+    rows=rows.filter(x=>normLabel(x.def.label)===normLabel(state.categoryFocus));
+  }
   const sk=state.allSort.key, dir=state.allSort.dir==="asc"?1:-1;
   rows.sort((a,b)=>{
     if(sk==="category") return compare(a.def.label,b.def.label)*dir;
@@ -273,9 +359,10 @@ function renderAllYearTable(){
   }).join("");
 
   const summary=selectedNetworkSummary();
-  $("all-year-table-summary").textContent=summary
+  const focusSuffix=state.categoryFocus?` · Category: ${state.categoryFocus}`:"";
+  $("all-year-table-summary").textContent=(summary
     ? `${monthLong(summary.month)} · ${metricLabel()} · All outlets · ${numFmt.format(summary.outletCount || 0)} outlets`
-    : `${months.length} month(s) · ${metricLabel()} · ${state.outlet.code} — ${state.outlet.name}`;
+    : `${months.length} month(s) · ${metricLabel()} · ${state.outlet.code} — ${state.outlet.name}`)+focusSuffix;
   $("all-year-head").querySelectorAll("th[data-sort]").forEach(th=>th.addEventListener("click",()=>{
     const key=th.dataset.sort;
     if(state.allSort.key===key) state.allSort.dir=state.allSort.dir==="asc"?"desc":"asc";
@@ -359,20 +446,22 @@ function computeProjectedRows(){
 
 function renderProjected(){
   const p=computeProjectedRows();
-  const overallGrowth=p.grand.lyS?p.grand.pS/p.grand.lyS-1:null;
-  const mom=p.grand.lmS?p.grand.pS/p.grand.lmS-1:null;
+  const focusRow=focusedProjectedRow(p);
+  const focusLabel=state.categoryFocus || "Grand Total";
+  const overallGrowth=focusRow.lyS?focusRow.pS/focusRow.lyS-1:null;
+  const mom=focusRow.lmS?focusRow.pS/focusRow.lmS-1:null;
 
   $("projected-kpis").innerHTML=[
-    kpi("Last Year Sales",money(p.grand.lyS),monthLong(p.lastYear)),
-    kpi("Last Month Sales",money(p.grand.lmS),monthLong(p.lastMonth)),
-    kpi("Projected Sales",money(p.grand.pS),monthLong(p.target),"accent"),
+    kpi("Last Year Sales",money(focusRow.lyS),`${focusLabel} · ${monthLong(p.lastYear)}`),
+    kpi("Last Month Sales",money(focusRow.lmS),`${focusLabel} · ${monthLong(p.lastMonth)}`),
+    kpi("Projected Sales",money(focusRow.pS),`${focusLabel} · ${monthLong(p.target)}`,"accent"),
     kpi("Projected YoY Growth",overallGrowth===null?"—":pct(overallGrowth),`vs ${monthLong(p.lastYear)}`,overallGrowth!==null&&overallGrowth>=0?"good":"warn"),
     kpi("Projection MoM",mom===null?"—":pct(mom),`vs ${monthLong(p.lastMonth)}`,mom!==null&&mom>=0?"good":"warn"),
     kpi("Network Seasonal Factor",p.seasonSales===null?"—":pct(p.seasonSales),`${monthLong(p.lastYear)} vs ${monthLong(p.priorLastYear)}`),
   ].join("");
 
   const scopeLabel=projectionScopeLabel();
-  $("projected-caption").textContent=`${scopeLabel} · Last Month: ${monthLong(p.lastMonth)}`;
+  $("projected-caption").textContent=`${scopeLabel} · Last Month: ${monthLong(p.lastMonth)}${state.categoryFocus?` · Category: ${state.categoryFocus}`:""}`;
   $("projection-info").innerHTML=`<strong>Scope:</strong> ${esc(scopeLabel)} &nbsp; | &nbsp; <strong>Last Year:</strong> ${esc(monthLong(p.lastYear))} &nbsp; | &nbsp; <strong>Last Month:</strong> ${esc(monthLong(p.lastMonth))} &nbsp; | &nbsp; <strong>Projected:</strong> ${esc(monthLong(p.target))} &nbsp; | &nbsp; Network seasonal Sales factor: <strong>${esc(p.seasonSales===null?"N/A":pct(p.seasonSales))}</strong> · FF factor: <strong>${esc(p.seasonFF===null?"N/A":pct(p.seasonFF))}</strong>`;
 
   renderProjectedTable(p);
@@ -399,7 +488,11 @@ function deltaClass(key,v){
 }
 function renderProjectedTable(p){
   const sk=state.projectedSort.key, dir=state.projectedSort.dir==="asc"?1:-1;
-  const rows=[...p.rows].sort((a,b)=>{
+  let rows=[...p.rows];
+  if(state.categoryFocus){
+    rows=rows.filter(r=>normLabel(r.label)===normLabel(state.categoryFocus));
+  }
+  rows.sort((a,b)=>{
     const av=sk==="category"?a.label:a[sk], bv=sk==="category"?b.label:b[sk];
     return compare(av,bv)*dir;
   });
@@ -422,7 +515,7 @@ function renderProjectedTable(p){
     }).join("")}</tr>`;
   }).join("");
 
-  $("projected-table-summary").textContent=`${p.rows.length} rows · ${projectionScopeLabel()} · Last Month ${monthLong(p.lastMonth)}`;
+  $("projected-table-summary").textContent=`${rows.length} row(s) · ${projectionScopeLabel()} · Last Month ${monthLong(p.lastMonth)}${state.categoryFocus?` · Category: ${state.categoryFocus}`:""}`;
   $("projected-head").querySelectorAll("th[data-sort]").forEach(th=>th.addEventListener("click",()=>{
     const key=th.dataset.sort;
     if(state.projectedSort.key===key) state.projectedSort.dir=state.projectedSort.dir==="asc"?"desc":"asc";
@@ -436,6 +529,7 @@ function downloadAllYear(){
   const {months,monthRows}=allPeriodData();
   const lines=[[`Category`,...months.map(monthShort)].map(csvCell).join(",")];
   state.index.allYearRows.forEach((r,i)=>{
+    if(state.categoryFocus && normLabel(r.label)!==normLabel(state.categoryFocus)) return;
     lines.push([r.label,...months.map(m=>{
       const v=monthRows[m][state.metric][i];
       return v===null||v===undefined?"":v;
@@ -447,11 +541,14 @@ function downloadProjected(){
   const p=computeProjectedRows();
   const headers=projectedColumns.map(c=>c[1]);
   const lines=[headers.map(csvCell).join(",")];
-  p.rows.forEach(r=>lines.push(projectedColumns.map(([k])=>{
-    if(k==="category") return csvCell(r.label);
-    const v=r[k];
-    return csvCell(v===null||v===undefined?"":v);
-  }).join(",")));
+  p.rows.forEach(r=>{
+    if(state.categoryFocus && normLabel(r.label)!==normLabel(state.categoryFocus)) return;
+    lines.push(projectedColumns.map(([k])=>{
+      if(k==="category") return csvCell(r.label);
+      const v=r[k];
+      return csvCell(v===null||v===undefined?"":v);
+    }).join(","));
+  });
   const scopeName=state.projectionScope==="all"?"ALL_OUTLETS":state.selectedCode;
   saveCsv(lines.join("\r\n"),`projected_zreport_${scopeName}_${p.lastMonth}_to_${p.target}.csv`);
 }
@@ -492,13 +589,20 @@ function renderAll(){
   renderProjected();
 }
 function bind(){
-  $("outlet-search").addEventListener("input",renderSearchSuggestions);
+  $("outlet-search").addEventListener("input",()=>{
+    state.categoryFocus="";
+    renderSearchSuggestions();
+  });
   $("outlet-search").addEventListener("focus",()=>{ if($("outlet-search").value.trim()) renderSearchSuggestions(); });
   $("outlet-search").addEventListener("keydown",e=>{
     if(e.key==="Escape"){ hideSuggestions(); return; }
     if(e.key==="Enter"){
       const first=$("search-suggestions").querySelector(".suggestion-item");
-      if(first){ e.preventDefault(); selectSearchOutlet(first.dataset.code); }
+      if(first){
+        e.preventDefault();
+        if(first.dataset.type==="category") selectSearchCategory(first.dataset.label);
+        else selectSearchOutlet(first.dataset.code);
+      }
     }
   });
   document.addEventListener("mousedown",e=>{

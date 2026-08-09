@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="color-scheme" content="dark">
   <title>Z-Report Dual Dashboard</title>
-  <link rel="stylesheet" href="styles.css?v=zreport-v6-search">
+  <link rel="stylesheet" href="styles.css?v=zreport-v7-category-search-20260809">
 </head>
 <body>
   <header class="topbar">
@@ -26,7 +26,7 @@
         <div class="field outlet-search autocomplete-field">
           <span>Search anything</span>
           <div class="autocomplete-wrap">
-            <input id="outlet-search" type="search" autocomplete="off" placeholder="Type outlet code or any part of outlet name">
+            <input id="outlet-search" type="search" autocomplete="off" placeholder="Type outlet code, outlet name, or category">
             <div id="search-suggestions" class="search-suggestions hidden" role="listbox"></div>
           </div>
         </div>
@@ -53,7 +53,7 @@
         </div>
       </div>
       <div class="global-note">
-        <strong>Search anything</strong> replaces the old Select Outlet dropdown. Type any outlet code or any part of an outlet name and matching results appear instantly underneath. Click a result to load that outlet in both dashboards. The All-outlet Month Summary and all other controls remain unchanged.
+        <strong>Search anything</strong> supports both outlets and categories. Type an outlet code, any part of an outlet name, or a category name. Outlet results load that outlet in both dashboards; Category results focus both dashboards on the selected category. The All-outlet Month Summary and all other controls remain unchanged.
       </div>
     </section>
 
@@ -156,6 +156,6 @@
     </footer>
   </main>
 
-  <script src="app.js?v=zreport-v6-search"></script>
+  <script src="app.js?v=zreport-v7-category-search-20260809"></script>
 </body>
 </html>
