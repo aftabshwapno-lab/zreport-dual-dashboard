@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="color-scheme" content="dark">
   <title>Z-Report Dual Dashboard</title>
-  <link rel="stylesheet" href="styles.css?v=zreport-v7-category-search-20260809">
+  <link rel="stylesheet" href="styles.css?v=zreport-v8-separate-searches-20260809">
 </head>
 <body>
   <header class="topbar">
@@ -24,10 +24,18 @@
     <section class="global-panel">
       <div class="controls-grid">
         <div class="field outlet-search autocomplete-field">
-          <span>Search anything</span>
+          <span>Search outlet code / name</span>
           <div class="autocomplete-wrap">
-            <input id="outlet-search" type="search" autocomplete="off" placeholder="Type outlet code, outlet name, or category">
-            <div id="search-suggestions" class="search-suggestions hidden" role="listbox"></div>
+            <input id="outlet-search" type="search" autocomplete="off" placeholder="Type outlet code or any part of outlet name">
+            <div id="outlet-search-suggestions" class="search-suggestions hidden" role="listbox" aria-label="Outlet search results"></div>
+          </div>
+        </div>
+
+        <div class="field category-search autocomplete-field">
+          <span>Search category</span>
+          <div class="autocomplete-wrap">
+            <input id="category-search" type="search" autocomplete="off" placeholder="Type category or category group">
+            <div id="category-search-suggestions" class="search-suggestions hidden" role="listbox" aria-label="Category search results"></div>
           </div>
         </div>
         <label class="field summary-select">
@@ -53,7 +61,7 @@
         </div>
       </div>
       <div class="global-note">
-        <strong>Search anything</strong> supports both outlets and categories. Type an outlet code, any part of an outlet name, or a category name. Outlet results load that outlet in both dashboards; Category results focus both dashboards on the selected category. The All-outlet Month Summary and all other controls remain unchanged.
+        <strong>Outlet Search</strong> and <strong>Category Search</strong> now work independently. Select an outlet by code/name, then optionally select a category to focus both dashboards on that category for the same outlet. Changing the outlet keeps the selected category active, which makes outlet-to-outlet category comparison easier. Clear the Category Search box to return to all categories.
       </div>
     </section>
 
@@ -156,6 +164,6 @@
     </footer>
   </main>
 
-  <script src="app.js?v=zreport-v7-category-search-20260809"></script>
+  <script src="app.js?v=zreport-v8-separate-searches-20260809"></script>
 </body>
 </html>

@@ -40,7 +40,7 @@ button,input,select{font:inherit}
 .global-panel{padding:14px;margin-bottom:14px}
 .controls-grid{
   display:grid;
-  grid-template-columns:2.15fr 2.05fr 1fr 1fr 1.55fr;
+  grid-template-columns:1.75fr 1.55fr 1.85fr .9fr .9fr 1.4fr;
   gap:10px;align-items:end;
 }
 .field{display:flex;flex-direction:column;gap:5px;min-width:0}
@@ -369,4 +369,50 @@ code{background:#17232c;color:#d8eef7;padding:2px 5px;border-radius:4px}
 .suggestion-category:hover,
 .suggestion-category:focus{
   background:#17291d;
+}
+
+
+/* ============================================================
+   v8 — Two independent autocomplete search sections
+   ============================================================ */
+
+.outlet-search,
+.category-search{
+  position:relative;
+  min-width:0;
+}
+
+.outlet-search .search-suggestions,
+.category-search .search-suggestions{
+  z-index:180;
+}
+
+.category-search .search-suggestions{
+  border-color:#3f6047;
+}
+
+.category-search input:focus{
+  border-color:#63bd75 !important;
+  box-shadow:0 0 0 3px rgba(99,189,117,.13) !important;
+}
+
+@media(max-width:1450px){
+  .controls-grid{
+    grid-template-columns:1.4fr 1.3fr 1.5fr 1fr 1fr;
+  }
+  .quick-ranges{
+    grid-column:span 2;
+  }
+}
+
+@media(max-width:950px){
+  .controls-grid{
+    grid-template-columns:1fr 1fr;
+  }
+  .outlet-search,
+  .category-search,
+  .summary-select,
+  .quick-ranges{
+    grid-column:span 2;
+  }
 }

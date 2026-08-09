@@ -114,10 +114,12 @@ function formatMetric(v){
 function outletSearchText(o){
   return `${o.code} ${o.name}`.toLowerCase();
 }
+
 function matchingOutlets(query){
   const q=String(query||"").trim().toLowerCase();
   if(!q) return [];
   const terms=q.split(/\s+/).filter(Boolean);
+
   return state.index.outlets
     .filter(o=>terms.every(t=>outletSearchText(o).includes(t)))
     .sort((a,b)=>{
@@ -134,10 +136,12 @@ function searchableCategories(){
     .filter(r=>normLabel(r.label)!=="grand total")
     .map(r=>({label:r.label,kind:r.kind}));
 }
+
 function matchingCategories(query){
   const q=String(query||"").trim().toLowerCase();
   if(!q) return [];
   const terms=q.split(/\s+/).filter(Boolean);
+
   return searchableCategories()
     .filter(c=>terms.every(t=>c.label.toLowerCase().includes(t)))
     .sort((a,b)=>{
@@ -148,64 +152,88 @@ function matchingCategories(query){
     });
 }
 
-function hideSuggestions(){
-  $("search-suggestions").classList.add("hidden");
-  $("search-suggestions").innerHTML="";
+function hideOutletSuggestions(){
+  $("outlet-search-suggestions").classList.add("hidden");
+  $("outlet-search-suggestions").innerHTML="";
 }
 
-function renderSearchSuggestions(){
+function hideCategorySuggestions(){
+  $("category-search-suggestions").classList.add("hidden");
+  $("category-search-suggestions").innerHTML="";
+}
+
+function renderOutletSuggestions(){
   const q=$("outlet-search").value.trim();
-  if(!q){ hideSuggestions(); return; }
+  const box=$("outlet-search-suggestions");
 
-  const outlets=matchingOutlets(q);
-  const categories=matchingCategories(q);
-  const box=$("search-suggestions");
+  if(!q){
+    hideOutletSuggestions();
+    return;
+  }
 
-  if(!outlets.length && !categories.length){
-    box.innerHTML=`<div class="suggestion-empty">No matching outlet or category found</div>`;
+  const matches=matchingOutlets(q);
+  if(!matches.length){
+    box.innerHTML=`<div class="suggestion-empty">No matching outlet found</div>`;
     box.classList.remove("hidden");
     return;
   }
 
-  const outletVisible=outlets.slice(0,25);
-  const categoryVisible=categories.slice(0,20);
-  let html="";
+  const visible=matches.slice(0,40);
+  box.innerHTML=visible.map(o=>`
+    <button type="button" class="suggestion-item suggestion-outlet" data-code="${esc(o.code)}" role="option">
+      <span class="suggestion-badge outlet-badge">OUTLET</span>
+      <span class="suggestion-main">
+        <strong>${esc(o.code)}</strong>
+        <span>${esc(o.name)}</span>
+      </span>
+    </button>
+  `).join("")+
+  (matches.length>visible.length
+    ? `<div class="suggestion-more">${numFmt.format(matches.length-visible.length)} more outlet result(s) — keep typing to narrow</div>`
+    : "");
 
-  if(outletVisible.length){
-    html+=`<div class="suggestion-group-title">OUTLETS</div>`;
-    html+=outletVisible.map(o=>`
-      <button type="button" class="suggestion-item suggestion-outlet" data-type="outlet" data-code="${esc(o.code)}">
-        <span class="suggestion-badge outlet-badge">OUTLET</span>
-        <span class="suggestion-main">
-          <strong>${esc(o.code)}</strong>
-          <span>${esc(o.name)}</span>
-        </span>
-      </button>`).join("");
-    if(outlets.length>outletVisible.length){
-      html+=`<div class="suggestion-more">${numFmt.format(outlets.length-outletVisible.length)} more outlet result(s) — keep typing to narrow</div>`;
-    }
-  }
-
-  if(categoryVisible.length){
-    html+=`<div class="suggestion-group-title">CATEGORIES</div>`;
-    html+=categoryVisible.map(c=>`
-      <button type="button" class="suggestion-item suggestion-category" data-type="category" data-label="${esc(c.label)}">
-        <span class="suggestion-badge category-badge">${c.kind==="total"?"GROUP":"CATEGORY"}</span>
-        <span class="suggestion-main">
-          <strong>${esc(c.label)}</strong>
-          <span>${c.kind==="total"?"Category group / total":"Category performance"}</span>
-        </span>
-      </button>`).join("");
-  }
-
-  box.innerHTML=html;
   box.classList.remove("hidden");
 
   box.querySelectorAll(".suggestion-item").forEach(btn=>{
     btn.addEventListener("mousedown",e=>{
       e.preventDefault();
-      if(btn.dataset.type==="category") selectSearchCategory(btn.dataset.label);
-      else selectSearchOutlet(btn.dataset.code);
+      selectSearchOutlet(btn.dataset.code);
+    });
+  });
+}
+
+function renderCategorySuggestions(){
+  const q=$("category-search").value.trim();
+  const box=$("category-search-suggestions");
+
+  if(!q){
+    hideCategorySuggestions();
+    return;
+  }
+
+  const matches=matchingCategories(q);
+  if(!matches.length){
+    box.innerHTML=`<div class="suggestion-empty">No matching category found</div>`;
+    box.classList.remove("hidden");
+    return;
+  }
+
+  box.innerHTML=matches.slice(0,30).map(c=>`
+    <button type="button" class="suggestion-item suggestion-category" data-label="${esc(c.label)}" role="option">
+      <span class="suggestion-badge category-badge">${c.kind==="total"?"GROUP":"CATEGORY"}</span>
+      <span class="suggestion-main">
+        <strong>${esc(c.label)}</strong>
+        <span>${c.kind==="total"?"Category group / total":"Category performance"}</span>
+      </span>
+    </button>
+  `).join("");
+
+  box.classList.remove("hidden");
+
+  box.querySelectorAll(".suggestion-item").forEach(btn=>{
+    btn.addEventListener("mousedown",e=>{
+      e.preventDefault();
+      selectSearchCategory(btn.dataset.label);
     });
   });
 }
@@ -213,18 +241,26 @@ function renderSearchSuggestions(){
 function selectSearchOutlet(code){
   const o=state.index.outlets.find(x=>x.code===code);
   if(!o) return;
-  state.categoryFocus="";
+
+  // Keep the selected category active while changing outlets.
   $("outlet-search").value=`${o.code} — ${o.name}`;
-  hideSuggestions();
+  hideOutletSuggestions();
   loadOutlet(code);
 }
 
 function selectSearchCategory(label){
   const row=(state.index.allYearRows || []).find(r=>normLabel(r.label)===normLabel(label));
   if(!row) return;
+
   state.categoryFocus=row.label;
-  $("outlet-search").value=`Category — ${row.label}`;
-  hideSuggestions();
+  $("category-search").value=row.label;
+  hideCategorySuggestions();
+  renderAll();
+}
+
+function clearCategoryFocus(){
+  if(!state.categoryFocus) return;
+  state.categoryFocus="";
   renderAll();
 }
 
@@ -233,10 +269,12 @@ function focusedAllYearIndex(){
   const idx=(state.index.allYearRows || []).findIndex(r=>normLabel(r.label)===normLabel(state.categoryFocus));
   return idx>=0 ? idx : state.index.allYearGrandIndex;
 }
+
 function focusedAllYearLabel(){
   if(!state.categoryFocus) return "Grand Total";
   return state.categoryFocus;
 }
+
 function focusedProjectedRow(p){
   if(!state.categoryFocus) return p.grand;
   return p.rows.find(r=>normLabel(r.label)===normLabel(state.categoryFocus)) || p.grand;
@@ -589,24 +627,52 @@ function renderAll(){
   renderProjected();
 }
 function bind(){
-  $("outlet-search").addEventListener("input",()=>{
-    state.categoryFocus="";
-    renderSearchSuggestions();
+  $("outlet-search").addEventListener("input",renderOutletSuggestions);
+  $("outlet-search").addEventListener("focus",()=>{
+    if($("outlet-search").value.trim()) renderOutletSuggestions();
   });
-  $("outlet-search").addEventListener("focus",()=>{ if($("outlet-search").value.trim()) renderSearchSuggestions(); });
   $("outlet-search").addEventListener("keydown",e=>{
-    if(e.key==="Escape"){ hideSuggestions(); return; }
+    if(e.key==="Escape"){
+      hideOutletSuggestions();
+      return;
+    }
     if(e.key==="Enter"){
-      const first=$("search-suggestions").querySelector(".suggestion-item");
+      const first=$("outlet-search-suggestions").querySelector(".suggestion-item");
       if(first){
         e.preventDefault();
-        if(first.dataset.type==="category") selectSearchCategory(first.dataset.label);
-        else selectSearchOutlet(first.dataset.code);
+        selectSearchOutlet(first.dataset.code);
       }
     }
   });
+
+  $("category-search").addEventListener("input",()=>{
+    if(!$("category-search").value.trim()){
+      hideCategorySuggestions();
+      clearCategoryFocus();
+      return;
+    }
+    renderCategorySuggestions();
+  });
+  $("category-search").addEventListener("focus",()=>{
+    if($("category-search").value.trim()) renderCategorySuggestions();
+  });
+  $("category-search").addEventListener("keydown",e=>{
+    if(e.key==="Escape"){
+      hideCategorySuggestions();
+      return;
+    }
+    if(e.key==="Enter"){
+      const first=$("category-search-suggestions").querySelector(".suggestion-item");
+      if(first){
+        e.preventDefault();
+        selectSearchCategory(first.dataset.label);
+      }
+    }
+  });
+
   document.addEventListener("mousedown",e=>{
-    if(!e.target.closest(".autocomplete-wrap")) hideSuggestions();
+    if(!e.target.closest(".outlet-search")) hideOutletSuggestions();
+    if(!e.target.closest(".category-search")) hideCategorySuggestions();
   });
   $("network-month-select").addEventListener("change",e=>{
     state.networkSummaryMonth=e.target.value;
