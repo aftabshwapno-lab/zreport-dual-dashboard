@@ -228,3 +228,44 @@ code{background:#17232c;color:#d8eef7;padding:2px 5px;border-radius:4px}
     width:100%;
   }
 }
+
+
+/* ============================================================
+   v5 — Sticky global control panel
+   Keeps the outlet/month/date controls available while scrolling.
+   ============================================================ */
+
+.global-panel{
+  position: sticky !important;
+  top: 8px !important;
+  z-index: 70 !important;
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  box-shadow: 0 14px 34px rgba(0,0,0,.52) !important;
+  scrollbar-color:#405661 #080d11;
+}
+
+.global-panel::-webkit-scrollbar{
+  width:9px;
+}
+.global-panel::-webkit-scrollbar-track{
+  background:#080d11;
+}
+.global-panel::-webkit-scrollbar-thumb{
+  background:#405661;
+  border:2px solid #080d11;
+  border-radius:10px;
+}
+
+/* Keep the dark command-center visually separated from content underneath. */
+.global-panel{
+  outline:1px solid rgba(70,104,122,.22);
+}
+
+@media(max-width:760px){
+  .global-panel{
+    top:4px !important;
+    max-height:calc(100vh - 8px);
+  }
+}

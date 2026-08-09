@@ -2,7 +2,6 @@ const $ = id => document.getElementById(id);
 const esc = v => String(v ?? "").replace(/[&<>"']/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
 const numFmt = new Intl.NumberFormat("en-US",{maximumFractionDigits:0});
 const oneFmt = new Intl.NumberFormat("en-US",{minimumFractionDigits:1,maximumFractionDigits:1});
-const compactFmt = new Intl.NumberFormat("en-US",{notation:"compact",maximumFractionDigits:1});
 
 const state = {
   index:null,
@@ -20,8 +19,31 @@ const state = {
 };
 
 function valueNum(v){ const n=Number(v); return Number.isFinite(n)?n:0; }
+
+function trimNumber(n,maxDecimals=2){
+  return new Intl.NumberFormat("en-US",{
+    minimumFractionDigits:0,
+    maximumFractionDigits:maxDecimals
+  }).format(n);
+}
+
+function bdCompact(v){
+  const n=valueNum(v);
+  const sign=n<0?"-":"";
+  const a=Math.abs(n);
+
+  // Bangladesh display convention requested for the dashboard:
+  // 1,00,00,000+  -> Cr.
+  // 1,00,000+     -> Lac
+  // 10,000+       -> K
+  // below 10,000  -> exact value
+  if(a>=10000000) return `${sign}${trimNumber(a/10000000,2)} Cr.`;
+  if(a>=100000)   return `${sign}${trimNumber(a/100000,2)} Lac`;
+  if(a>=10000)    return `${sign}${trimNumber(a/1000,2)}K`;
+  return `${sign}${trimNumber(a,2)}`;
+}
 function pct(v){ return Number.isFinite(v)?`${oneFmt.format(v*100)}%`:"—"; }
-function money(v){ return numFmt.format(Math.round(valueNum(v))); }
+function money(v){ return bdCompact(v); }
 function basket(v){ return Number.isFinite(v)?oneFmt.format(v):"—"; }
 function monthLong(k){ return new Date(`${k}-01T00:00:00`).toLocaleDateString("en-US",{month:"long",year:"numeric"}); }
 function monthShort(k){ return new Date(`${k}-01T00:00:00`).toLocaleDateString("en-US",{month:"short",year:"2-digit"}); }
@@ -173,7 +195,7 @@ function renderTrend(){
   for(let i=0;i<5;i++){
     const yy=padT+(H-padT-padB)*i/4;
     const val=max-(max-min)*i/4;
-    grid+=`<line x1="${padL}" y1="${yy}" x2="${W-padR}" y2="${yy}" class="chart-gridline"/><text x="4" y="${yy+3}" class="chart-y-label">${esc(state.metric==="basket"?oneFmt.format(val):compactFmt.format(val))}</text>`;
+    grid+=`<line x1="${padL}" y1="${yy}" x2="${W-padR}" y2="${yy}" class="chart-gridline"/><text x="4" y="${yy+3}" class="chart-y-label">${esc(state.metric==="basket"?oneFmt.format(val):bdCompact(val))}</text>`;
   }
   const step=Math.max(1,Math.ceil(months.length/10));
   const labels=months.map((m,i)=>(i%step===0||i===months.length-1)?`<text x="${x(i)}" y="${H-8}" text-anchor="middle" class="chart-label">${esc(monthShort(m))}</text>`:"").join("");
@@ -373,7 +395,10 @@ function downloadAllYear(){
   const {months,monthRows}=allPeriodData();
   const lines=[[`Category`,...months.map(monthShort)].map(csvCell).join(",")];
   state.index.allYearRows.forEach((r,i)=>{
-    lines.push([r.label,...months.map(m=>formatMetric(monthRows[m][state.metric][i]))].map(csvCell).join(","));
+    lines.push([r.label,...months.map(m=>{
+      const v=monthRows[m][state.metric][i];
+      return v===null||v===undefined?"":v;
+    })].map(csvCell).join(","));
   });
   saveCsv(lines.join("\r\n"),`all_year_${state.selectedCode}_${state.start}_${state.end}_${state.metric}.csv`);
 }
@@ -381,7 +406,11 @@ function downloadProjected(){
   const p=computeProjectedRows();
   const headers=projectedColumns.map(c=>c[1]);
   const lines=[headers.map(csvCell).join(",")];
-  p.rows.forEach(r=>lines.push(projectedColumns.map(([k])=>csvCell(projectedCell(r,k))).join(",")));
+  p.rows.forEach(r=>lines.push(projectedColumns.map(([k])=>{
+    if(k==="category") return csvCell(r.label);
+    const v=r[k];
+    return csvCell(v===null||v===undefined?"":v);
+  }).join(",")));
   const scopeName=state.projectionScope==="all"?"ALL_OUTLETS":state.selectedCode;
   saveCsv(lines.join("\r\n"),`projected_zreport_${scopeName}_${p.lastMonth}_to_${p.target}.csv`);
 }
