@@ -6,6 +6,8 @@ const oneFmt = new Intl.NumberFormat("en-US",{minimumFractionDigits:1,maximumFra
 const state = {
   index:null,
   outlet:null,
+  runtimeOutlets:null,
+  bound:false,
   selectedCode:"",
   search:"",
   categoryFocus:"",
@@ -330,9 +332,13 @@ async function loadOutlet(code){
   const meta=state.index.outlets.find(o=>o.code===code);
   if(!meta) return;
   $("outlet-search").value=`${meta.code} — ${meta.name}`;
-  const res=await fetch(meta.file,{cache:"no-store"});
-  if(!res.ok) throw new Error(`Could not load outlet ${code}`);
-  state.outlet=await res.json();
+  if(state.runtimeOutlets?.[code]){
+    state.outlet=state.runtimeOutlets[code];
+  }else{
+    const res=await fetch(meta.file,{cache:"no-store"});
+    if(!res.ok) throw new Error(`Could not load outlet ${code}`);
+    state.outlet=await res.json();
+  }
   state.selectedCode=code;
   syncProjectionFromTopControls();
   renderAll();
@@ -786,37 +792,60 @@ function bind(){
   $("download-projected").addEventListener("click",downloadProjected);
 }
 
+async function activateDataset(bundle,{keepSelection=false}={}){
+  const index=bundle?.index || bundle;
+  if(!index?.outlets?.length) throw new Error("The Z-Report dataset is empty.");
+  const previousCode=keepSelection ? state.selectedCode : "";
+  state.index=index;
+  state.runtimeOutlets=bundle?.outlets || null;
+  state.start=index.defaultRange.start;
+  state.end=index.defaultRange.end;
+  state.networkSummaryMonth="";
+  state.categoryFocus="";
+  state.projectionScope="outlet";
+  state.projectionMonth=state.end;
+  $("date-start").min=index.meta.earliestActualMonth;
+  $("date-start").max=index.meta.latestActualMonth;
+  $("date-end").min=index.meta.earliestActualMonth;
+  $("date-end").max=index.meta.latestActualMonth;
+  $("date-start").value=state.start;
+  $("date-end").value=state.end;
+  $("category-search").value="";
+  $("source-pill").textContent=`${numFmt.format(index.meta.outletCount)} outlets · ${index.meta.sourceWorkbook}`;
+  $("source-pill").title=`Actual months: ${index.meta.earliestActualMonth} to ${index.meta.latestActualMonth}\nAll Year header horizon includes ${index.meta.futureHeaderMonthCount} future month(s).`;
+  state.selectedCode=index.outlets.some(o=>o.code===previousCode)
+    ? previousCode
+    : index.outlets.find(o=>o.code==="D109")?.code || index.outlets[0]?.code || "";
+  renderNetworkMonthOptions();
+  renderProjectionControls();
+  if(!state.bound){ bind(); state.bound=true; }
+  if(state.selectedCode){
+    await loadOutlet(state.selectedCode);
+    $("outlet-search").value="";
+    hideOutletSuggestions();
+  }
+}
+
 async function init(){
   try{
-    const res=await fetch("data/index.json",{cache:"no-store"});
-    if(!res.ok) throw new Error(`Could not load dashboard index (${res.status})`);
-    state.index=await res.json();
-    state.start=state.index.defaultRange.start;
-    state.end=state.index.defaultRange.end;
-    state.projectionMonth=state.end;
-    $("date-start").min=state.index.meta.earliestActualMonth;
-    $("date-start").max=state.index.meta.latestActualMonth;
-    $("date-end").min=state.index.meta.earliestActualMonth;
-    $("date-end").max=state.index.meta.latestActualMonth;
-    $("date-start").value=state.start;
-    $("date-end").value=state.end;
-
-    $("source-pill").textContent=`${numFmt.format(state.index.meta.outletCount)} outlets · ${state.index.meta.sourceWorkbook}`;
-    $("source-pill").title=`Actual months: ${state.index.meta.earliestActualMonth} to ${state.index.meta.latestActualMonth}\nAll Year header horizon includes ${state.index.meta.futureHeaderMonthCount} future month(s).`;
-
-    state.selectedCode=state.index.outlets.find(o=>o.code==="D109")?.code || state.index.outlets[0]?.code || "";
-    renderNetworkMonthOptions();
-    renderProjectionControls();
-    bind();
-    if(state.selectedCode){
-      await loadOutlet(state.selectedCode);
-      // Keep a default dashboard outlet internally, but do not prefill
-      // the search field. The user sees the requested placeholder instead.
-      $("outlet-search").value="";
-      hideOutletSuggestions();
+    const cached=await window.ZReportDrive.restore();
+    if(cached){
+      await activateDataset(cached);
+    }else{
+      const res=await fetch("data/index.json",{cache:"no-store"});
+      if(!res.ok) throw new Error(`Could not load the retained dashboard snapshot (${res.status})`);
+      await activateDataset(await res.json());
     }
+    window.ZReportDrive.bind({
+      onData: driveSnapshot=>activateDataset(driveSnapshot,{keepSelection:true}).catch(console.error),
+      onStatus: status=>{
+        const button=$("drive-reconnect");
+        if(button) button.textContent=status.kind==="reading"?"Working…":"Reconnect Google Drive";
+      },
+    });
+    await window.ZReportDrive.refresh({interactive:false});
   }catch(err){
-    document.body.innerHTML=`<div style="padding:36px;font-family:Segoe UI,Arial;background:#070a0d;color:#fff;min-height:100vh"><h2>Dashboard could not load</h2><p>${esc(err.message)}</p><p>Run <code>python scripts/build.py</code> and deploy the generated <code>site</code> folder.</p></div>`;
+    document.body.innerHTML=`<div style="padding:36px;font-family:Segoe UI,Arial;background:#070a0d;color:#fff;min-height:100vh"><h2>Dashboard could not load</h2><p>${esc(err.message)}</p><p>Use Drive setup to connect the shared Google Drive folder containing the current Z-Report workbook.</p></div>`;
   }
 }
 init();
