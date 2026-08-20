@@ -636,7 +636,7 @@ def main() -> int:
         SITE_DIR.mkdir(parents=True, exist_ok=True)
 
         # Copy app shell before building the generated data files.
-        for filename in ("index.html", "styles.css", "app.js"):
+        for filename in ("index.html", "styles.css", "app.js", "google-drive-source.js", "drive-zreport.js"):
             shutil.copy2(WEB_DIR / filename, SITE_DIR / filename)
         (SITE_DIR / ".nojekyll").write_text("", encoding="utf-8")
 
