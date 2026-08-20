@@ -300,7 +300,7 @@
 
   async function refresh({ interactive = false, pickFolder = false } = {}) {
     if (refreshPromise) return refreshPromise;
-    refreshPromise = (async () => {
+    const run = (async () => {
       try {
         if (interactive) {
           setStatus("reading", "CONNECTING", "Connecting to the shared Google Drive folder…");
@@ -343,9 +343,14 @@
         }
         setStatus(snapshot ? "retained" : "error", snapshot ? "RETAINED SNAPSHOT" : "DRIVE ERROR", snapshot ? `Showing the retained Z-Report snapshot. ${error?.message || "Google Drive could not be read."}` : (error?.message || "Google Drive could not be read."));
         return null;
-      } finally { refreshPromise = null; }
+      }
     })();
-    return refreshPromise;
+    refreshPromise = run;
+    try {
+      return await run;
+    } finally {
+      if (refreshPromise === run) refreshPromise = null;
+    }
   }
 
   function openSetup() {
