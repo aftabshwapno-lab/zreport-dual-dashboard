@@ -23,6 +23,19 @@ const state = {
 
 function valueNum(v){ const n=Number(v); return Number.isFinite(n)?n:0; }
 
+function formatSnapshotTime(value){
+  const parsed=value?new Date(value):null;
+  if(!parsed||Number.isNaN(parsed.getTime())) return "unavailable";
+  return parsed.toLocaleString("en-GB",{
+    day:"2-digit",month:"short",year:"numeric",hour:"numeric",minute:"2-digit",hour12:true,timeZone:"Asia/Dhaka"
+  });
+}
+
+function showPublicSnapshotTime(value){
+  const node=$("public-snapshot-time");
+  if(node) node.textContent=`Last snapshot taken: ${formatSnapshotTime(value)}`;
+}
+
 function trimNumber(n,maxDecimals=2){
   return new Intl.NumberFormat("en-US",{
     minimumFractionDigits:0,
@@ -335,9 +348,15 @@ async function loadOutlet(code){
   if(state.runtimeOutlets?.[code]){
     state.outlet=state.runtimeOutlets[code];
   }else{
-    const res=await fetch(meta.file,{cache:"no-store"});
-    if(!res.ok) throw new Error(`Could not load outlet ${code}`);
-    state.outlet=await res.json();
+    const sharedOutlet=await window.ZReportDrive?.loadOutlet?.(code);
+    if(sharedOutlet){
+      state.outlet=sharedOutlet;
+    }else{
+      if(!meta.file) throw new Error(`Could not load shared outlet ${code}`);
+      const res=await fetch(meta.file,{cache:"no-store"});
+      if(!res.ok) throw new Error(`Could not load outlet ${code}`);
+      state.outlet=await res.json();
+    }
   }
   state.selectedCode=code;
   syncProjectionFromTopControls();
@@ -795,6 +814,7 @@ function bind(){
 async function activateDataset(bundle,{keepSelection=false}={}){
   const index=bundle?.index || bundle;
   if(!index?.outlets?.length) throw new Error("The Z-Report dataset is empty.");
+  showPublicSnapshotTime(bundle?.savedAt || bundle?.cloudUpdatedAt || index.meta?.generatedAt);
   const previousCode=keepSelection ? state.selectedCode : "";
   state.index=index;
   state.runtimeOutlets=bundle?.outlets || null;
@@ -845,7 +865,12 @@ async function init(){
     });
     await window.ZReportDrive.refresh({interactive:false});
   }catch(err){
-    document.body.innerHTML=`<div style="padding:36px;font-family:Segoe UI,Arial;background:#070a0d;color:#fff;min-height:100vh"><h2>Dashboard could not load</h2><p>${esc(err.message)}</p><p>Use Drive setup to connect the shared Google Drive folder containing the current Z-Report workbook.</p></div>`;
+    const owner=window.DashboardDriveOwner?.isOwner?.();
+    const guidance=owner
+      ? "Use Drive setup to connect the shared Google Drive folder containing the current Z-Report workbook."
+      : "No published snapshot is currently available.";
+    const detail=owner ? err.message : "The latest published dashboard data could not be loaded.";
+    document.body.innerHTML=`<div style="padding:36px;font-family:Segoe UI,Arial;background:#070a0d;color:#fff;min-height:100vh"><h2>Dashboard could not load</h2><p>${esc(detail)}</p><p>${esc(guidance)}</p></div>`;
   }
 }
 init();

@@ -5,9 +5,11 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="color-scheme" content="dark">
   <title>Z-Report Dual Dashboard</title>
-  <style>html:not(.drive-owner) [data-drive-owner-only] { display: none !important; }</style>
+  <style>
+    html:not(.drive-owner) [data-drive-owner-only] { display: none !important; }
+  </style>
   <script src="drive-owner-mode.js?v=owner-device-v1"></script>
-  <link rel="stylesheet" href="styles.css?v=zreport-v12-google-drive-20260820">
+  <link rel="stylesheet" href="styles.css?v=zreport-v14-private-source-20260821">
 </head>
 <body>
   <header class="topbar">
@@ -17,9 +19,10 @@
       <p>Historical All Year performance and automated projected ZREPORT</p>
     </div>
     <div class="source-pills">
-      <span id="source-pill" class="pill">Loading workbook…</span>
+      <span id="source-pill" class="pill" data-drive-owner-only>Loading workbook…</span>
       <span id="range-pill" class="pill">Loading period…</span>
-      <span id="drive-source-status" class="pill drive-pill" data-kind="idle">DRIVE CHECK</span>
+      <span id="drive-source-status" class="pill drive-pill" data-kind="idle" data-drive-owner-only>DRIVE CHECK</span>
+      <span id="public-snapshot-time" class="pill" data-public-snapshot>Last snapshot taken: checking…</span>
       <button id="drive-reconnect" class="btn primary drive-source-btn" type="button" data-drive-owner-only>Reconnect Google Drive</button>
       <button id="drive-setup" class="btn ghost drive-source-btn" type="button" data-drive-owner-only>Drive setup</button>
     </div>
@@ -169,7 +172,7 @@
       Dashboard 02 now has its own <strong>Projection scope</strong> and <strong>Last month</strong> controls. Last Year is always 12 months before the chosen Last Month, and Projected is always the following month. For <strong>Selected outlet</strong>, the selected outlet's Last Month category mix is used. For <strong>All outlets</strong>, the workbook's monthly All-outlet summary is used. The projected grand total applies the network's corresponding prior-year month-on-month seasonal factor. Basket = Sales ÷ FF.
     </section>
 
-    <footer id="drive-source-note">The dashboard uses the shared Google Drive folder selected for the Shwapno dashboard portal. A retained snapshot is kept in this browser.</footer>
+    <footer id="drive-source-note" data-drive-owner-only>The dashboard uses the shared Google Drive folder selected for the Shwapno dashboard portal. A retained snapshot is kept in this browser.</footer>
   </main>
 
   <div id="drive-modal" class="drive-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="drive-modal-title" hidden data-drive-owner-only>
@@ -188,7 +191,7 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="google-drive-source.js?v=shared-drive-v1"></script>
-  <script src="drive-zreport.js?v=zreport-drive-v3-owner-mode"></script>
-  <script src="app.js?v=zreport-v12-google-drive-20260820"></script>
+  <script src="drive-zreport.js?v=zreport-drive-v5-private-source"></script>
+  <script src="app.js?v=zreport-v14-private-source"></script>
 </body>
 </html>

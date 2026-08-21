@@ -14,6 +14,10 @@
   let onStatus = null;
   let refreshPromise = null;
   let watchTimer = null;
+  const cloudModulePromise = import("./cloud-snapshot.js?v=shared-dashboard-cloud-v1").catch(error => {
+    console.warn("Z-Report shared snapshot module unavailable:", error);
+    return null;
+  });
 
   function openDb() {
     return new Promise((resolve, reject) => {
@@ -46,6 +50,36 @@
         request.onsuccess = request.onerror = () => resolve();
       });
     } catch { /* Retention failure must not block the live dashboard. */ }
+  }
+
+  const savedTime = value => {
+    const parsed = Date.parse(value?.savedAt || value?.cloudUpdatedAt || "");
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
+  async function publishSharedSnapshot(candidate) {
+    if (!candidate?.outlets || !candidate?.index?.outlets?.length) return;
+    try {
+      const cloud = await cloudModulePromise;
+      const result = await cloud?.publishZReportSnapshot?.(candidate);
+      if (result?.published && snapshot === candidate) {
+        setStatus("live", "GOOGLE DRIVE — LIVE", `Live from Google Drive. Shared snapshot updated for other PCs in ${result.parts.toLocaleString()} parts.`);
+      }
+    } catch (error) {
+      console.warn("Z-Report shared snapshot publish failed:", error);
+    }
+  }
+
+  async function loadOutlet(code) {
+    if (snapshot?.outlets?.[code]) return snapshot.outlets[code];
+    if (!snapshot?.cloud) return null;
+    try {
+      const cloud = await cloudModulePromise;
+      return await cloud?.readZReportOutlet?.(snapshot.cloud, code) || null;
+    } catch (error) {
+      console.warn(`Shared Z-Report outlet ${code} could not be loaded:`, error);
+      return null;
+    }
   }
 
   const norm = value => String(value ?? "").trim().replace(/\s+/g, " ").toLocaleLowerCase();
@@ -290,12 +324,25 @@
   }
 
   async function restore() {
-    const saved = await dbGet(CACHE_KEY);
-    if (saved?.index?.outlets?.length && saved?.outlets && saved?.savedAt) {
-      snapshot = saved;
-      return saved;
+    const [saved, shared] = await Promise.all([
+      dbGet(CACHE_KEY),
+      cloudModulePromise.then(cloud => cloud?.readZReportSnapshot?.()).catch(() => null),
+    ]);
+    const localValid = Boolean(saved?.index?.outlets?.length && saved?.outlets && saved?.savedAt);
+    const sharedValid = Boolean(shared?.index?.outlets?.length && shared?.cloud && shared?.savedAt);
+
+    if (localValid && sharedValid && saved.remoteSignature === shared.remoteSignature) snapshot = saved;
+    else if (sharedValid && (!localValid || savedTime(shared) > savedTime(saved))) snapshot = shared;
+    else if (localValid) snapshot = saved;
+    else if (sharedValid) snapshot = shared;
+    else snapshot = null;
+
+    if (snapshot?.sourceKind === "shared-cloud") {
+      setStatus("retained", "SHARED SNAPSHOT", `Showing the latest shared Z-Report snapshot from ${new Date(snapshot.savedAt).toLocaleString()}.`);
+    } else if (snapshot?.outlets) {
+      void publishSharedSnapshot(snapshot);
     }
-    return null;
+    return snapshot;
   }
 
   async function refresh({ interactive = false, pickFolder = false } = {}) {
@@ -323,6 +370,7 @@
         const remoteSignature = Drive.remoteSignature(meta);
         if (snapshot?.remoteSignature === remoteSignature) {
           setStatus("live", "GOOGLE DRIVE — LIVE", `Live from “${folder.name}”. ${snapshot.index.meta.outletCount.toLocaleString()} outlets · ${meta.name}.`);
+          void publishSharedSnapshot(snapshot);
           startWatch();
           return snapshot;
         }
@@ -333,6 +381,7 @@
         setStatus("reading", "SAVING SNAPSHOT", "Saving the calculated Z-Report snapshot for fast reopening…");
         await dbPut(CACHE_KEY, snapshot);
         setStatus("live", "GOOGLE DRIVE — LIVE", `Live from “${folder.name}”. ${parsed.index.meta.outletCount.toLocaleString()} outlets · ${meta.name}.`);
+        void publishSharedSnapshot(snapshot);
         if (onData) onData(snapshot);
         startWatch();
         return snapshot;
@@ -390,5 +439,5 @@
     document.addEventListener("visibilitychange", () => { if (!document.hidden && Drive.cachedToken()) refresh(); });
   }
 
-  window.ZReportDrive = Object.freeze({ restore, bind, refresh, parseWorkbook });
+  window.ZReportDrive = Object.freeze({ restore, bind, refresh, parseWorkbook, loadOutlet });
 })();
