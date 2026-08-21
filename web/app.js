@@ -431,6 +431,8 @@ function renderAllYearTable(){
   if(state.categoryFocus){
     rows=rows.filter(x=>normLabel(x.def.label)===normLabel(state.categoryFocus));
   }
+  const grandRows=rows.filter(x=>normLabel(x.def.label)==="grand total");
+  rows=rows.filter(x=>normLabel(x.def.label)!=="grand total");
   const sk=state.allSort.key, dir=state.allSort.dir==="asc"?1:-1;
   rows.sort((a,b)=>{
     if(sk==="category") return compare(a.def.label,b.def.label)*dir;
@@ -438,6 +440,7 @@ function renderAllYearTable(){
     const bv=monthRows[sk]?.[state.metric]?.[b.index];
     return compare(av,bv)*dir;
   });
+  rows.push(...grandRows);
 
   $("all-year-head").innerHTML=[
     `<th class="category ${sk==="category"?"sorted":""}" data-sort="category">Category <span class="sortmark">${sk==="category"?(dir===1?"▲":"▼"):"↕"}</span></th>`,
@@ -584,10 +587,13 @@ function renderProjectedTable(p){
   if(state.categoryFocus){
     rows=rows.filter(r=>normLabel(r.label)===normLabel(state.categoryFocus));
   }
+  const grandRows=rows.filter(r=>normLabel(r.label)==="grand total");
+  rows=rows.filter(r=>normLabel(r.label)!=="grand total");
   rows.sort((a,b)=>{
     const av=sk==="category"?a.label:a[sk], bv=sk==="category"?b.label:b[sk];
     return compare(av,bv)*dir;
   });
+  rows.push(...grandRows);
 
   const top=`<tr><th rowspan="2" class="category" data-sort="category">Category <span class="sortmark">${sk==="category"?(dir===1?"▲":"▼"):"↕"}</span></th>
     <th colspan="3" class="group-blue">LAST YEAR · ${esc(monthShort(p.lastYear))}</th>
