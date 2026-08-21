@@ -27,7 +27,7 @@ function formatSnapshotTime(value){
   const parsed=value?new Date(value):null;
   if(!parsed||Number.isNaN(parsed.getTime())) return "unavailable";
   return parsed.toLocaleString("en-GB",{
-    day:"2-digit",month:"short",year:"numeric",hour:"numeric",minute:"2-digit",hour12:true,timeZone:"Asia/Dhaka"
+    day:"2-digit",month:"short",year:"numeric",hour:"numeric",minute:"2-digit",second:"2-digit",hour12:true,timeZone:"Asia/Dhaka"
   });
 }
 

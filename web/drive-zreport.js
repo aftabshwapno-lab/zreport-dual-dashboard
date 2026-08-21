@@ -9,6 +9,7 @@
   const CACHE_KEY = "latest-v1";
   const REQUIRED_SHEETS = ["MAIN", "All Year", "AUTOMATED PROJECTED ZREPORT"];
   const DEFAULT_RANGE_MONTHS = 12;
+  const DRIVE_WATCH_MS = 1000;
   let snapshot = null;
   let onData = null;
   let onStatus = null;
@@ -345,7 +346,7 @@
     return snapshot;
   }
 
-  async function refresh({ interactive = false, pickFolder = false } = {}) {
+  async function refresh({ interactive = false, pickFolder = false, silent = false } = {}) {
     if (refreshPromise) return refreshPromise;
     const run = (async () => {
       try {
@@ -363,14 +364,13 @@
           setStatus(snapshot ? "retained" : "idle", snapshot ? "RETAINED SNAPSHOT" : "RECONNECT DRIVE", snapshot ? `Showing the retained Z-Report snapshot. Folder “${folder.name}” is remembered; click Reconnect Google Drive to check for updates.` : `Folder “${folder.name}” is remembered. Click Reconnect Google Drive to authorize read-only access.`);
           return;
         }
-        setStatus("reading", "CHECKING DRIVE", `Checking “${folder.name}” for the Z-Report workbook…`);
+        if (!silent || !snapshot) setStatus("reading", "CHECKING DRIVE", `Checking “${folder.name}” for the Z-Report workbook…`);
         const files = (await Drive.listFolderFiles(folder.id)).filter(meta => workbookScore(meta) < 99 && meta.capabilities?.canDownload !== false).sort((a, b) => workbookScore(a) - workbookScore(b) || Date.parse(b.modifiedTime || "") - Date.parse(a.modifiedTime || "") || String(a.name).localeCompare(String(b.name)));
         if (!files.length) throw new Error("No workbook named like “Z-REPORT CATEGORY WISE SALES …” was found in the shared Drive folder.");
         const meta = files[0];
         const remoteSignature = Drive.remoteSignature(meta);
         if (snapshot?.remoteSignature === remoteSignature) {
-          setStatus("live", "GOOGLE DRIVE — LIVE", `Live from “${folder.name}”. ${snapshot.index.meta.outletCount.toLocaleString()} outlets · ${meta.name}.`);
-          void publishSharedSnapshot(snapshot);
+          if (!silent) setStatus("live", "GOOGLE DRIVE — LIVE", `Live from “${folder.name}”. ${snapshot.index.meta.outletCount.toLocaleString()} outlets · ${meta.name}.`);
           startWatch();
           return snapshot;
         }
@@ -413,7 +413,7 @@
 
   function startWatch() {
     if (watchTimer) return;
-    watchTimer = setInterval(() => { if (!document.hidden && Drive.cachedToken()) refresh(); }, 30000);
+    watchTimer = setInterval(() => { if (Drive.cachedToken()) refresh({ silent: true }); }, DRIVE_WATCH_MS);
   }
 
   function bind(callbacks = {}) {
@@ -436,7 +436,7 @@
       closeSetup();
       setStatus(snapshot ? "retained" : "idle", snapshot ? "RETAINED SNAPSHOT" : "DRIVE SETUP REQUIRED", snapshot ? "Shared Drive setup was cleared. Showing the retained Z-Report snapshot." : "Shared Drive setup was cleared.");
     });
-    document.addEventListener("visibilitychange", () => { if (!document.hidden && Drive.cachedToken()) refresh(); });
+    document.addEventListener("visibilitychange", () => { if (!document.hidden && Drive.cachedToken()) refresh({ silent: true }); });
   }
 
   window.ZReportDrive = Object.freeze({ restore, bind, refresh, parseWorkbook, loadOutlet });
